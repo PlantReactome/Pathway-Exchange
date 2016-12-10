@@ -2171,7 +2171,7 @@ public class CuratorUtilities
 	// generate raw table containing species-specific gene counts binned by pathway
 	private void dumpGeneCountsInPathwaysBySpecies() throws Exception {
 
-        System.out.print("Pathway\tPathwayID\tOryza sativa");
+        System.out.print("Pathway\tPathwayID\tOryza_sativa");
 
 		// build the list of rice species names
 		Collection<GKInstance> speciesColl = dbAdaptor.fetchInstancesByClass(ReactomeJavaConstants.Species);
@@ -2184,7 +2184,7 @@ public class CuratorUtilities
 		Collections.sort(speciesList, new speciesNameComparator());
 
 		for (GKInstance species : speciesList) {
-            System.out.print("\t" + species.getDisplayName());
+            System.out.print("\t" + species.getDisplayName().replace(' ','_'));
 		}
         System.out.print("\n");
 
@@ -2199,6 +2199,7 @@ public class CuratorUtilities
         // iterate over the OS pathways; filtering for container pathways
         int count = 0;
         Set<GKInstance> nRGPs = null; // RGP container
+		boolean isPresent = false; // tests for presence of an orthologous pathway event in a given species
 
 		for (Iterator<?> itP = OSpathways.iterator(); itP.hasNext();) {
 			GKInstance curP = (GKInstance) itP.next();
@@ -2220,34 +2221,35 @@ public class CuratorUtilities
                 //count++;
                 // gather and write Os genes for this pathway
                 nRGPs = InstanceUtilities.grepRefPepSeqsFromPathway(curP);
-                System.out.print((nRGPs != null ? nRGPs.size() : "0") + "\t");
+                System.out.print((nRGPs != null ? nRGPs.size() : "0"));
                 //System.out.print("\n");
                 nRGPs = null; // reset for use with projected species
-
 
                 // get orthologousEvents for current pathway, look for a species match in each one
                 Collection<GKInstance> orthoEvents = curP.getAttributeValuesList(ReactomeJavaConstants.orthologousEvent);
                 if (orthoEvents.size() > 0) {
+					// look in each projected species for each orthoEvent
                     for (GKInstance curPS : speciesList) {
-                        boolean isPresent = false;
+                        isPresent = false;
                         for (Iterator<?> itOE = orthoEvents.iterator(); itOE.hasNext();) {
-                            isPresent = false;
                             nRGPs = null;
                             GKInstance curOE = (GKInstance) itOE.next();
                             GKInstance curOES = (GKInstance)curOE.getAttributeValue(ReactomeJavaConstants.species);
-                            // look in each projected species for each orthoEvent
                             if (curPS.equals(curOES)) {
-                                isPresent = true;
+								isPresent = true;
                                 // generate count of gene products in this species for this reaction
                                 nRGPs = InstanceUtilities.grepRefPepSeqsFromPathway(curOE);
+								System.out.print("\t" + (nRGPs != null ? nRGPs.size() : "0"));
+								break;
                             }
-                            if (isPresent)
-                                System.out.print("\t" + (nRGPs != null ? nRGPs.size() : ""));
                         }
+                        // no orthoEvent found for this species
+                        if (!isPresent)
+                        	System.out.print("\t0");
                     }
                     System.out.print("\n");
                 }
-                else { // placeholder for non-projected species
+                else { // placeholders for non-projected species - print list of 0's
                     for (GKInstance curPS : speciesList)
                         System.out.print("\t0");
                     System.out.print("\n");
