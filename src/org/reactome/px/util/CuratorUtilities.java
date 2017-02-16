@@ -4,7 +4,6 @@
 package org.reactome.px.util;
 
 import java.io.File;
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -15,6 +14,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
@@ -302,36 +302,6 @@ public class CuratorUtilities
 	        	gene_id = "";
 	        }
 	    	logger.info("filtered size: " + count);
-
-/*    		
-    		logger.info("Collecting RGP identifiers matching refDB UniProt and geneName includes 'LOC*'...");
-	
-	    	Collection<GKInstance> c = uniAdaptor.fetchInstanceByAttribute(ReactomeJavaConstants.ReferenceGeneProduct, 
-	    			ReactomeJavaConstants.geneName, 
-	    			"LIKE", 
-	    			"LOC%");
-	    	logger.info("size: " + c.size());
-	    	String refDb = new String();
-	    	String uniprot = new String();
-	    	String loc = new String();
-	        for (GKInstance rgp : c) {
-	        	
-	        	if (rgp.getAttributeValue(ReactomeJavaConstants.referenceDatabase) != null)
-	        		refDb = ((GKInstance)rgp.getAttributeValue(ReactomeJavaConstants.referenceDatabase)).getDisplayName();
-	        	if (rgp.getAttributeValue(ReactomeJavaConstants.identifier) != null)
-	        		uniprot = rgp.getAttributeValue(ReactomeJavaConstants.identifier).toString();
-	        	if (rgp.getAttributeValuesList(ReactomeJavaConstants.geneName) != null) {
-	        		List<String> geneNames = rgp.getAttributeValuesList(ReactomeJavaConstants.geneName);
-	    			for (Iterator<String> it = geneNames.iterator(); it.hasNext();) {
-	    	            String currName = (String)it.next().toUpperCase();
-	        			if (currName.startsWith("LOC_")) {
-	        				loc = currName;
-	        			}
-	        		}
-	        	}
-	        	System.out.println(rgp.getDBID() + "\t" + refDb + ":" + uniprot + "\t" + loc);
-	        }
-*/      
     	} else {
 	    	logger.info("Collecting RGP instances with designated species or subspecies ('Oryza sativa*') and referenceDatabase != UniProt");
 
@@ -365,6 +335,84 @@ public class CuratorUtilities
     		logger.info("filtered size: " + count);
     	}
     }
+
+	/**
+	 * Retrieve and list Ensembl genes by stableID and species
+	 * @Parms
+	 *
+	 */
+	@SuppressWarnings("unchecked")
+	private void ensemblGeneDump() throws Exception
+	{
+		logger.info("Collecting RGP instances for Ensembl genes");
+		String stableID = null;
+
+		// grab RE by refDb = "Ensembl", get id and species, then grab stableID from referring EWAS
+		Collection<GKInstance> c = uniAdaptor.fetchInstanceByAttribute(ReactomeJavaConstants.ReferenceGeneProduct,
+				ReactomeJavaConstants.referenceDatabase,
+				"=",
+				8940081L);
+
+		// ...and Zea mays... (no idea why multiple refDB entries exist for Ensemble; artifact of orthoinference process)
+		Collection<GKInstance> cZm = uniAdaptor.fetchInstanceByAttribute(ReactomeJavaConstants.ReferenceGeneProduct,
+				ReactomeJavaConstants.referenceDatabase,
+				"=",
+				9027059L);
+
+		c.addAll(cZm);
+		logger.info("total Ensembl RGP count, without Oryza sativa: " + c.size());
+
+		for (Iterator<GKInstance> it = c.iterator(); it.hasNext();) {
+			GKInstance rgp = it.next();
+			if (rgp.getAttributeValue(ReactomeJavaConstants.identifier) != null) {
+				String identifier = rgp.getAttributeValue(ReactomeJavaConstants.identifier).toString();
+				String speciesName = ((GKInstance)rgp.getAttributeValue(ReactomeJavaConstants.species)).getDisplayName();
+
+				// go into referring EWAS, fetch stableID
+				GKInstance re = (GKInstance)(rgp.getReferers(ReactomeJavaConstants.referenceEntity).toArray()[0]);
+				if (re.getAttributeValue(ReactomeJavaConstants.stableIdentifier) != null) {
+					stableID = ((GKInstance) re.getAttributeValue(ReactomeJavaConstants.stableIdentifier)).getDisplayName();
+					//stableID = stableID.contains(".") ? stableID.split(".")[0] : stableID;
+				}
+				System.out.println(speciesName + "\t" + stableID + "\t" + identifier);
+			}
+		}
+
+		// next, grab Oryza sativa genes
+		Collection<GKInstance> cOs = uniAdaptor.fetchInstanceByAttribute(ReactomeJavaConstants.ReferenceGeneProduct,
+				ReactomeJavaConstants.referenceDatabase,
+				"=",
+				2L);  // UniProt
+		String gene_id = null;
+		for (GKInstance rgp : cOs) {
+			if (rgp.getAttributeValuesList(ReactomeJavaConstants.geneName) != null) {
+				List<String> geneNames = rgp.getAttributeValuesList(ReactomeJavaConstants.geneName);
+				for (Iterator<String> it = geneNames.iterator(); it.hasNext(); ) {
+					String currName = (String) it.next().toUpperCase();
+					// and more recently curated rice RGPs with OS ids and no LOC (minority)
+					if (currName.toUpperCase().startsWith("OS") && currName.length() == 12) {
+						gene_id = currName;
+						break;
+					}
+					// grab the curated rice RGPs with LOC identifiers for mapping (majority)
+					if (currName.startsWith("LOC_")) {
+						gene_id = currName;
+					}
+				}
+			}
+			if (gene_id.length() > 0) {
+				String speciesName = "Oryza sativa";
+				// go into referring EWAS, fetch stableID
+				GKInstance re = (GKInstance)(rgp.getReferers(ReactomeJavaConstants.referenceEntity).toArray()[0]);
+				if (re.getAttributeValue(ReactomeJavaConstants.stableIdentifier) != null) {
+					stableID = ((GKInstance) re.getAttributeValue(ReactomeJavaConstants.stableIdentifier)).getDisplayName();
+					//stableID = stableID.contains(".") ? stableID.split(".")[0] : stableID;
+				}
+				System.out.println(speciesName + "\t" + stableID + "\t" + gene_id);
+			}
+			gene_id = "";
+		}
+	}
 
     @SuppressWarnings("unchecked")
     private void listAthRGPs() throws Exception
@@ -2259,6 +2307,8 @@ public class CuratorUtilities
 		//sb.append("Os Pathway count: " + count + "\n");
 	}
 
+
+
 	/**
 	 * Constructor: Establish logger and configs.
 	 */
@@ -2302,7 +2352,8 @@ public class CuratorUtilities
 	        //run_utilities.exportReactionProjectionTable(); // for PR data releases - Gramoogle
 	        //run_utilities.removeStaleLOCs();
 			//run_utilities.dumpRiceProjectionReactionTable();
-			run_utilities.dumpGeneCountsInPathwaysBySpecies();
+			//run_utilities.dumpGeneCountsInPathwaysBySpecies();
+			run_utilities.ensemblGeneDump();
 	        // create and attach IE to changes; commit changes
     		//run_utilities.commitChanges();
         }
