@@ -14,7 +14,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Stream;
 
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
@@ -372,7 +371,8 @@ public class CuratorUtilities
 				GKInstance re = (GKInstance)(rgp.getReferers(ReactomeJavaConstants.referenceEntity).toArray()[0]);
 				if (re.getAttributeValue(ReactomeJavaConstants.stableIdentifier) != null) {
 					stableID = ((GKInstance) re.getAttributeValue(ReactomeJavaConstants.stableIdentifier)).getDisplayName();
-					//stableID = stableID.contains(".") ? stableID.split(".")[0] : stableID;
+					//stableID = stableID.replaceAll("\\.+$","");
+					stableID = stableID.contains(".") ? stableID.split("\\.")[0] : stableID;
 				}
 				System.out.println(speciesName + "\t" + stableID + "\t" + identifier);
 			}
@@ -406,7 +406,7 @@ public class CuratorUtilities
 				GKInstance re = (GKInstance)(rgp.getReferers(ReactomeJavaConstants.referenceEntity).toArray()[0]);
 				if (re.getAttributeValue(ReactomeJavaConstants.stableIdentifier) != null) {
 					stableID = ((GKInstance) re.getAttributeValue(ReactomeJavaConstants.stableIdentifier)).getDisplayName();
-					//stableID = stableID.contains(".") ? stableID.split(".")[0] : stableID;
+					stableID = stableID.contains(".") ? stableID.split("\\.")[0] : stableID;
 				}
 				System.out.println(speciesName + "\t" + stableID + "\t" + gene_id);
 			}
