@@ -358,8 +358,18 @@ public class CuratorUtilities
 				"=",
 				9027059L);
 
+		// ...and Arabidopsis thaliana... (points to TAIR as refDB)
+		Collection<GKInstance> cAt = uniAdaptor.fetchInstanceByAttribute(ReactomeJavaConstants.ReferenceGeneProduct,
+				ReactomeJavaConstants.referenceDatabase,
+				"=",
+				9079024L);
+
 		c.addAll(cZm);
+		c.addAll(cAt);
 		logger.info("total Ensembl RGP count, without Oryza sativa: " + c.size());
+
+		// header
+		System.out.println("Species\tPR_Stable_ID\tGene_ID");
 
 		for (Iterator<GKInstance> it = c.iterator(); it.hasNext();) {
 			GKInstance rgp = it.next();
@@ -373,8 +383,8 @@ public class CuratorUtilities
 					stableID = ((GKInstance) re.getAttributeValue(ReactomeJavaConstants.stableIdentifier)).getDisplayName();
 					//stableID = stableID.replaceAll("\\.+$","");
 					stableID = stableID.contains(".") ? stableID.split("\\.")[0] : stableID;
+					System.out.println(speciesName + "\t" + stableID + "\t" + identifier);
 				}
-				System.out.println(speciesName + "\t" + stableID + "\t" + identifier);
 			}
 		}
 
