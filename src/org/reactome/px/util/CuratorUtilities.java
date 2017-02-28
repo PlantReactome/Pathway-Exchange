@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.sun.xml.internal.ws.api.message.ExceptionHasMessage;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 import org.gk.database.DefaultInstanceEditHelper;
@@ -2317,6 +2318,32 @@ public class CuratorUtilities
 		//sb.append("Os Pathway count: " + count + "\n");
 	}
 
+	// set the NCBI Taxon Xrefs for all projected species using the list in CuratorUtilities.xml
+	private void addTaxonIds() throws Exception {
+		Collection<GKInstance> speciesColl = dbAdaptor.fetchInstancesByClass(ReactomeJavaConstants.Species);
+		String curSpeciesName;
+		String curTaxonID;
+		for (GKInstance curSpecies : speciesColl){
+			curSpeciesName = curSpecies.getDisplayName();
+			curTaxonID = this.NCBI_map.get(curSpeciesName);
+			//System.out.println("NCBI:" + curTaxonID + " " + curSpeciesName);
+			if (curTaxonID != null) {
+				List<GKInstance> xrefs = curSpecies.getAttributeValuesList(ReactomeJavaConstants.crossReference);
+				//System.out.println(xrefs);
+				if (xrefs.isEmpty()) {
+					GKInstance db_id = new GKInstance();
+					// TODO: How do I set the class of a new GKInstance?
+					//db_id.setSchemaClass(ReactomeJavaConstants.DatabaseIdentifier);
+					db_id.setAttributeValue(ReactomeJavaConstants.identifier, curTaxonID);
+					db_id.setAttributeValue(ReactomeJavaConstants.referenceDatabase, 72810L); // NCBI Taxonomy
+					curSpecies.addAttributeValue(ReactomeJavaConstants.crossReference, db_id);
+					System.out.println(curSpecies.getAttributeValuesList(ReactomeJavaConstants.crossReference));
+				}
+			}
+			curSpeciesName = null;
+			curTaxonID = null;
+		}
+	}
 
 
 	/**
@@ -2363,7 +2390,8 @@ public class CuratorUtilities
 	        //run_utilities.removeStaleLOCs();
 			//run_utilities.dumpRiceProjectionReactionTable();
 			//run_utilities.dumpGeneCountsInPathwaysBySpecies();
-			run_utilities.ensemblGeneDump();
+			//run_utilities.ensemblGeneDump();
+			run_utilities.addTaxonIds();
 	        // create and attach IE to changes; commit changes
     		//run_utilities.commitChanges();
         }

@@ -1,16 +1,43 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <utility_settings>
-	<!--db_connection_info host="reactomecurator.oicr.on.ca" port="3306" name="gk_central" user="authortool" pwd="T001test"/-->
-	<db_connection_info host="floret.cgrb.oregonstate.edu" port="3306" name="test_slice_oryza_sativa_14_ortho_osat_all" user="react-app-user" pwd="react-app-user_pw"/>
-	<!--db_connection_info host="floret.cgrb.oregonstate.edu" port="3306" name="Os_identity_revisions" user="react-app-user" pwd="react-app-user_pw"/-->
-	<!--data_file path="/home/preecej/Documents/projects/plant_reactome/plant_reactome_site/projection/2014_rice_conference/brassinosteroid_signaling_V4.rtpj"/-->
+	<db_connection_info host="" port="" name="" user="" pwd=""/>
 	<target_taxa>
 		<species NCBI_id="4530">Oryza sativa</species>
 		<species NCBI_id="4530">Oryza sativa subsp. japonica</species> <!-- spoofing the NCBI id -->
-		<species NCBI_id="4530">Oryza sativa subsp. indica</species> <!-- spoofing the NCBI id -->
-		<!--species NCBI_id="4530">Oryza kasalath</species--> <!-- is a strain of O.sativa -->
-		<!--species NCBI_id="">Oryza australiensis</species>
+		<species NCBI_id="37682">Aegilops tauschii</species>
+		<species NCBI_id="13333">Amborella trichopoda</species>
+		<species NCBI_id="81972">Arabidopsis lyrata</species>
+		<species NCBI_id="3702">Arabidopsis thaliana</species>
+		<species NCBI_id="130453">Arachis duranensis</species>
+		<species NCBI_id="130454">Arachis ipaensis</species>
+		<species NCBI_id="161934">Beta vulgaris</species>
+		<species NCBI_id="15368">Brachypodium distachyon</species>
+		<species NCBI_id="3708">Brassica napus</species>
+		<species NCBI_id="3712">Brassica oleracea</species>
+		<species NCBI_id="3711">Brassica rapa</species>
+		<species NCBI_id="3821">Cajanus cajan</species>
+		<species NCBI_id="4072">Capsicum annuum</species>
+		<species NCBI_id="3055">Chlamydomonas reinhardtii</species>
+		<species NCBI_id="3827">Cicer arietinum</species>
+		<species NCBI_id="2711">Citrus sinensis</species>
+		<species NCBI_id="49390">Coffea canephora</species>
+		<species NCBI_id="45157">Cyanidioschyzon merolae</species>
+		<species NCBI_id="71139">Eucalyptus grandis</species>
+		<species NCBI_id="57918">Fragaria vesca</species>
+		<species NCBI_id="3847">Glycine max</species>
+		<species NCBI_id="29730">Gossypium raimondii</species>
+		<species NCBI_id="4513">Hordeum vulgare</species>
+		<species NCBI_id="180498">Jatropha curcas</species>
+		<species NCBI_id="77586">Leersia perrieri</species>
+		<species NCBI_id="3750">Malus domestica</species>
+		<species NCBI_id="3983">Manihot esculenta</species>
+		<species NCBI_id="3880">Medicago truncatula</species>
+		<species NCBI_id="4155">Mimulus guttatus</species>
+		<species NCBI_id="4641">Musa acuminata</species>
+		<species NCBI_id="39946">Oryza sativa subsp. indica</species>
+		<species NCBI_id="1736659">Oryza australiensis</species>
 		<species NCBI_id="110450">Oryza granulata</species>
+		<!--species NCBI_id="4530">Oryza kasalath</species--> <!-- is a strain of O.sativa -->
 		<species NCBI_id="4528">Oryza longistaminata</species>
 		<species NCBI_id="63629">Oryza minuta</species>
 		<species NCBI_id="4535">Oryza officinalis</species>
@@ -23,26 +50,27 @@
 		<species NCBI_id="40148">Oryza glumaepatula</species>
 		<species NCBI_id="4529">Oryza rufipogon</species>
 		<species NCBI_id="39946">Oryza sativa Indica</species>
-		<species NCBI_id="77586">Leersia perrieri</species>
-		<species NCBI_id="37682">Aegilops tauschii</species-->
-		<!--species NCBI_id="3702">Arabidopsis thaliana</species-->
-		<!--species NCBI_id="15368">Brachypodium distachyon</species>
-		<species NCBI_id="3711">Brassica rapa</species>
-		<species NCBI_id="3847">Glycine max</species>
-		<species NCBI_id="4513">Hordeum vulgare</species>
-		<species NCBI_id="3880">Medicago truncatula</species>
-		<species NCBI_id="4641">Musa acuminata</species>
+		<species NCBI_id="242159">Ostreococcus lucimarinus</species>
+		<species NCBI_id="3885">Phaseolus vulgaris</species>
+		<species NCBI_id="42345">Phoenix dactylifera</species>
+		<species NCBI_id="3218">Physcomitrella patens</species>
+		<species NCBI_id="3329">Picea abies</species>
+		<species NCBI_id="3352">Pinus taeda</species>
 		<species NCBI_id="3694">Populus trichocarpa</species>
 		<species NCBI_id="3760">Prunus persica</species>
+		<species NCBI_id="88036">Selaginella moellendorffii</species>
 		<species NCBI_id="4555">Setaria italica</species>
 		<species NCBI_id="4081">Solanum lycopersicum</species>
 		<species NCBI_id="4113">Solanum tuberosum</species>
 		<species NCBI_id="4558">Sorghum bicolor</species>
+		<species NCBI_id="1148">Synechocystis pcc6803</species>
+		<species NCBI_id="3641">Theobroma cacao</species>
+		<species NCBI_id="57577">Trifolium pratense</species>
 		<species NCBI_id="4565">Triticum aestivum</species>
+		<species NCBI_id="4571">Triticum turgidum</species>
 		<species NCBI_id="4572">Triticum urartu</species>
-		<species NCBI_id="4577">Zea mays</species-->
-		
-		<!--species NCBI_id="29760">Vitis vinifera</species-->
+		<species NCBI_id="29760">Vitis vinifera</species>
+		<species NCBI_id="4577">Zea mays</species>
 	</target_taxa>
 	<designated_species>Oryza sativa</designated_species>
 	<!--designated_species>Arabidopsis thaliana</designated_species-->
