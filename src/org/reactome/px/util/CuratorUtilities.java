@@ -15,7 +15,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import com.sun.xml.internal.ws.api.message.ExceptionHasMessage;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 import org.gk.database.DefaultInstanceEditHelper;
@@ -27,6 +26,7 @@ import org.gk.model.PersistenceAdaptor;
 import org.gk.model.ReactomeJavaConstants;
 import org.gk.persistence.MySQLAdaptor;
 import org.gk.persistence.XMLFileAdaptor;
+import org.gk.schema.Schema;
 import org.gk.schema.GKSchema;
 import org.gk.schema.GKSchemaAttribute;
 import org.gk.schema.GKSchemaClass;
@@ -39,8 +39,6 @@ import org.jdom.Element;
 import org.jdom.input.SAXBuilder;
 import org.jdom.xpath.XPath;
 
-import com.hp.hpl.jena.query.junit.QueryTest;
-import com.sun.xml.internal.fastinfoset.util.StringArray;
 
 /**
  * @author preecej
@@ -54,6 +52,7 @@ public class CuratorUtilities
 	private Map<String,String> NCBI_map = new HashMap(); 
 	private GKInstance defaultPerson = new GKInstance(); 
     private List<GKInstance> changedInsts = new ArrayList<GKInstance>();
+	private List<GKInstance> newInsts = new ArrayList<GKInstance>();
     private GKInstance target_instance_edit = new GKInstance();
     private List<GKInstance> target_instances = new ArrayList<GKInstance>();
     private String map_path = new String();
@@ -127,7 +126,7 @@ public class CuratorUtilities
         // get target InstanceEdit, if supplied
 		if (XPath.selectSingleNode(document,"/utility_settings/target_instance_edit/@id") != null) {
 	        Long instance_id = Long.parseLong(((Attribute) XPath.selectSingleNode(document,"/utility_settings/target_instance_edit/@id")).getValue());
-	        logger.info("Target Instance Edit ID: " + instance_id); // TEST   
+	        logger.info("Target Instance Edit ID: " + instance_id); // TEST
 	        if (instance_id != null) {
 	        	this.target_instance_edit = (dbAdaptor != null ? dbAdaptor : fileAdaptor).fetchInstance(instance_id);
 	            // build list of modified objects
@@ -202,37 +201,82 @@ public class CuratorUtilities
     }
 
 	/**
+	 * Commit all changed instances to the database or file. For databases, uses a transaction to preserve db integrity.
+	 * @throws Exception
+	 */
+	private void commitAdds() throws Exception
+	{
+		try {
+			logger.info("Committing new instances...");
+			if (newInsts.size() == 0) {
+				logger.info("...no new instances to commit.");
+				return; // Don't need do anything
+			}
+
+			if (dbAdaptor != null) {
+				logger.info("Committing created instances to database...");
+
+				// configure InstanceEdit for this set of updates
+				DefaultInstanceEditHelper ieHelper = new DefaultInstanceEditHelper();
+				GKInstance instance_edit = ieHelper.createDefaultInstanceEdit(defaultPerson);
+				instance_edit.addAttributeValue(ReactomeJavaConstants.dateTime, GKApplicationUtilities.getDateTime());
+				InstanceDisplayNameGenerator.setDisplayName(instance_edit);
+
+				// associate changed instances with the InstanceEdit stamp
+				instance_edit = ieHelper.attachDefaultIEToDBInstances(newInsts, instance_edit);
+
+				// Commit changes
+				//dbAdaptor.startTransaction();
+				dbAdaptor.storeInstance(instance_edit);
+
+				for (GKInstance inst : newInsts) {
+					dbAdaptor.storeInstance(inst);
+				}
+				dbAdaptor.commit();
+			} else {
+				logger.info("Saving adds to file...");
+				fileAdaptor.save(this.rtpjName);
+			}
+		}
+		catch(Exception e) {
+			if (dbAdaptor != null)
+				//dbAdaptor.rollback();
+				throw e; // Re-thrown exception
+		}
+	}
+
+	/**
      * Commit all changed instances to the database or file. For databases, uses a transaction to preserve db integrity.
      * @throws Exception
 	 */
     private void commitChanges() throws Exception
     {
         try {
-			logger.info("Commiting/saving changes...");
+			logger.info("Committing changes...");
 	        if (changedInsts.size() == 0) {
-				logger.info("...no changed instances to commit/save.");
+				logger.info("...no instances to commit.");
 	            return; // Don't need do anything
 	        }
 
         	if (dbAdaptor != null) {
-    			logger.info("Commiting changes to database...");
+    			logger.info("Committing instances to database...");
     			
     			// configure InstanceEdit for this set of updates
     	        DefaultInstanceEditHelper ieHelper = new DefaultInstanceEditHelper();
     	        GKInstance instance_edit = ieHelper.createDefaultInstanceEdit(defaultPerson);
     	        instance_edit.addAttributeValue(ReactomeJavaConstants.dateTime, GKApplicationUtilities.getDateTime());
     	        InstanceDisplayNameGenerator.setDisplayName(instance_edit);
-    	
+
     	        // associate changed instances with the InstanceEdit stamp
     	        instance_edit = ieHelper.attachDefaultIEToDBInstances(changedInsts, instance_edit);
 
     	        // Commit changes
-	        	dbAdaptor.startTransaction();
+	        	//dbAdaptor.startTransaction();
 	            dbAdaptor.storeInstance(instance_edit);
 	            for (GKInstance inst : changedInsts) {
 	            	dbAdaptor.updateInstance(inst);
 	            }
-	            dbAdaptor.commit();
+                dbAdaptor.commit();
             } else {
 				logger.info("Saving changes to file...");
             	fileAdaptor.save(this.rtpjName);
@@ -240,10 +284,13 @@ public class CuratorUtilities
         }
         catch(Exception e) {
         	if (dbAdaptor != null)
-        		dbAdaptor.rollback();
+        		//dbAdaptor.rollback();
             throw e; // Re-thrown exception
         }
     }
+
+    //private void commitChanges(boolean isUpdate, List<GKInstance> instanceList) throws Exception
+
 
     /**
      * Changes the display name of reactions
@@ -2318,11 +2365,23 @@ public class CuratorUtilities
 		//sb.append("Os Pathway count: " + count + "\n");
 	}
 
-	// set the NCBI Taxon Xrefs for all projected species using the list in CuratorUtilities.xml
+    private GKInstance createInstance(SchemaClass sCls) {
+        GKInstance newInstance = new GKInstance(sCls);
+        newInstance.setDbAdaptor(dbAdaptor);
+        return newInstance;
+    }
+
+    // set the NCBI Taxon Xrefs for all projected species using the list in CuratorUtilities.xml
 	private void addTaxonIds() throws Exception {
 		Collection<GKInstance> speciesColl = dbAdaptor.fetchInstancesByClass(ReactomeJavaConstants.Species);
+        Schema schema = dbAdaptor.getSchema();
+        SchemaClass cls = schema.getClassByName("DatabaseIdentifier");
+        GKInstance refDB = dbAdaptor.fetchInstance(72810L);
 		String curSpeciesName;
 		String curTaxonID;
+        Long new_ID = dbAdaptor.fetchMaxDbId();
+
+        // add DBIs
 		for (GKInstance curSpecies : speciesColl){
 			curSpeciesName = curSpecies.getDisplayName();
 			curTaxonID = this.NCBI_map.get(curSpeciesName);
@@ -2331,19 +2390,48 @@ public class CuratorUtilities
 				List<GKInstance> xrefs = curSpecies.getAttributeValuesList(ReactomeJavaConstants.crossReference);
 				//System.out.println(xrefs);
 				if (xrefs.isEmpty()) {
-					GKInstance db_id = new GKInstance();
-					// TODO: How do I set the class of a new GKInstance?
-					//db_id.setSchemaClass(ReactomeJavaConstants.DatabaseIdentifier);
-					db_id.setAttributeValue(ReactomeJavaConstants.identifier, curTaxonID);
-					db_id.setAttributeValue(ReactomeJavaConstants.referenceDatabase, 72810L); // NCBI Taxonomy
-					curSpecies.addAttributeValue(ReactomeJavaConstants.crossReference, db_id);
-					System.out.println(curSpecies.getAttributeValuesList(ReactomeJavaConstants.crossReference));
+                    new_ID++;
+                    GKInstance newDBI = createInstance(cls);
+					newDBI.setAttributeValue(ReactomeJavaConstants.identifier, curTaxonID);
+                    newDBI.setAttributeValue(ReactomeJavaConstants.referenceDatabase, refDB); // NCBI Taxonomy
+                    newDBI.setDBID(new_ID);
+                    newDBI.setDisplayName("NCBI_taxonomy:" + curTaxonID);
+                    newInsts.add(newDBI);
+                    System.out.println(newDBI + " " + newDBI.getDisplayName() + " " + curSpeciesName);
 				}
 			}
 			curSpeciesName = null;
 			curTaxonID = null;
 		}
-	}
+        commitAdds(); // must have in DB before attempting to update Species
+/*
+        // update Species
+        for (GKInstance curSpecies : speciesColl) {
+            curSpeciesName = curSpecies.getDisplayName();
+            curTaxonID = this.NCBI_map.get(curSpeciesName);
+            //System.out.println("NCBI:" + curTaxonID + " " + curSpeciesName);
+            if (curTaxonID != null) {
+                List<GKInstance> xrefs = curSpecies.getAttributeValuesList(ReactomeJavaConstants.crossReference);
+                //System.out.println(xrefs);
+                if (xrefs.isEmpty()) {
+                    Collection<GKInstance> DBIs = dbAdaptor.fetchInstanceByAttribute(
+                            ReactomeJavaConstants.DatabaseIdentifier,
+                            ReactomeJavaConstants.identifier,
+                            "=",
+                            curTaxonID);
+                    if (DBIs.size() == 1) {
+                        for (GKInstance dbi : DBIs) {
+                            System.out.println(dbi + " " + dbi.getDisplayName() + " " + curSpeciesName);
+                            curSpecies.addAttributeValue(ReactomeJavaConstants.crossReference, dbi);
+                            changedInsts.add(curSpecies);
+                        }
+                    }
+                }
+            }
+        }
+		commitChanges();
+  */
+    }
 
 
 	/**
