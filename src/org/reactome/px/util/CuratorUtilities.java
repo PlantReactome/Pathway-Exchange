@@ -226,22 +226,18 @@ public class CuratorUtilities
 				instance_edit = ieHelper.attachDefaultIEToDBInstances(newInsts, instance_edit);
 
 				// Commit changes
-				//dbAdaptor.startTransaction();
 				dbAdaptor.storeInstance(instance_edit);
 
 				for (GKInstance inst : newInsts) {
-					dbAdaptor.storeInstance(inst);
+					dbAdaptor.storeInstance(inst, true);
 				}
-				dbAdaptor.commit();
 			} else {
 				logger.info("Saving adds to file...");
 				fileAdaptor.save(this.rtpjName);
 			}
 		}
 		catch(Exception e) {
-			if (dbAdaptor != null)
-				//dbAdaptor.rollback();
-				throw e; // Re-thrown exception
+			throw e; // Re-thrown exception
 		}
 	}
 
@@ -271,20 +267,16 @@ public class CuratorUtilities
     	        instance_edit = ieHelper.attachDefaultIEToDBInstances(changedInsts, instance_edit);
 
     	        // Commit changes
-	        	//dbAdaptor.startTransaction();
 	            dbAdaptor.storeInstance(instance_edit);
 	            for (GKInstance inst : changedInsts) {
 	            	dbAdaptor.updateInstance(inst);
 	            }
-                dbAdaptor.commit();
             } else {
 				logger.info("Saving changes to file...");
             	fileAdaptor.save(this.rtpjName);
             }
         }
         catch(Exception e) {
-        	if (dbAdaptor != null)
-        		//dbAdaptor.rollback();
             throw e; // Re-thrown exception
         }
     }
@@ -2371,6 +2363,37 @@ public class CuratorUtilities
         return newInstance;
     }
 
+    private void updateTaxonIds(Collection<GKInstance> speciesColl) throws Exception {
+		String curSpeciesName;
+		String curTaxonID;
+
+		for (GKInstance curSpecies : speciesColl) {
+			curSpeciesName = curSpecies.getDisplayName();
+			curTaxonID = this.NCBI_map.get(curSpeciesName);
+			//System.out.println("NCBI:" + curTaxonID + " " + curSpeciesName);
+			if (curTaxonID != null) {
+				List<GKInstance> xrefs = curSpecies.getAttributeValuesList(ReactomeJavaConstants.crossReference);
+				//System.out.println(xrefs);
+				if (xrefs.isEmpty()) {
+					Collection<GKInstance> DBIs = dbAdaptor.fetchInstanceByAttribute(
+							ReactomeJavaConstants.DatabaseIdentifier,
+							ReactomeJavaConstants.identifier,
+							"=",
+							curTaxonID);
+					if (DBIs.size() == 1) {
+						for (GKInstance dbi : DBIs) {
+							System.out.println(dbi + " " + dbi.getDisplayName() + " " + curSpeciesName);
+							curSpecies.addAttributeValue(ReactomeJavaConstants.crossReference, dbi);
+							changedInsts.add(curSpecies);
+						}
+					}
+				}
+			}
+		}
+		commitChanges();
+		changedInsts = new ArrayList<GKInstance>(); // reset
+	}
+
     // set the NCBI Taxon Xrefs for all projected species using the list in CuratorUtilities.xml
 	private void addTaxonIds() throws Exception {
 		Collection<GKInstance> speciesColl = dbAdaptor.fetchInstancesByClass(ReactomeJavaConstants.Species);
@@ -2379,9 +2402,11 @@ public class CuratorUtilities
         GKInstance refDB = dbAdaptor.fetchInstance(72810L);
 		String curSpeciesName;
 		String curTaxonID;
-        Long new_ID = dbAdaptor.fetchMaxDbId();
 
-        // add DBIs
+		// attempt to associate existing NCBI DatabaseIdentifiers with projected species (e.g. O.kasalath)
+		updateTaxonIds(speciesColl);
+
+        // add DBIs for those missing
 		for (GKInstance curSpecies : speciesColl){
 			curSpeciesName = curSpecies.getDisplayName();
 			curTaxonID = this.NCBI_map.get(curSpeciesName);
@@ -2390,47 +2415,19 @@ public class CuratorUtilities
 				List<GKInstance> xrefs = curSpecies.getAttributeValuesList(ReactomeJavaConstants.crossReference);
 				//System.out.println(xrefs);
 				if (xrefs.isEmpty()) {
-                    new_ID++;
                     GKInstance newDBI = createInstance(cls);
 					newDBI.setAttributeValue(ReactomeJavaConstants.identifier, curTaxonID);
                     newDBI.setAttributeValue(ReactomeJavaConstants.referenceDatabase, refDB); // NCBI Taxonomy
-                    newDBI.setDBID(new_ID);
                     newDBI.setDisplayName("NCBI_taxonomy:" + curTaxonID);
                     newInsts.add(newDBI);
                     System.out.println(newDBI + " " + newDBI.getDisplayName() + " " + curSpeciesName);
 				}
 			}
-			curSpeciesName = null;
-			curTaxonID = null;
 		}
         commitAdds(); // must have in DB before attempting to update Species
-/*
-        // update Species
-        for (GKInstance curSpecies : speciesColl) {
-            curSpeciesName = curSpecies.getDisplayName();
-            curTaxonID = this.NCBI_map.get(curSpeciesName);
-            //System.out.println("NCBI:" + curTaxonID + " " + curSpeciesName);
-            if (curTaxonID != null) {
-                List<GKInstance> xrefs = curSpecies.getAttributeValuesList(ReactomeJavaConstants.crossReference);
-                //System.out.println(xrefs);
-                if (xrefs.isEmpty()) {
-                    Collection<GKInstance> DBIs = dbAdaptor.fetchInstanceByAttribute(
-                            ReactomeJavaConstants.DatabaseIdentifier,
-                            ReactomeJavaConstants.identifier,
-                            "=",
-                            curTaxonID);
-                    if (DBIs.size() == 1) {
-                        for (GKInstance dbi : DBIs) {
-                            System.out.println(dbi + " " + dbi.getDisplayName() + " " + curSpeciesName);
-                            curSpecies.addAttributeValue(ReactomeJavaConstants.crossReference, dbi);
-                            changedInsts.add(curSpecies);
-                        }
-                    }
-                }
-            }
-        }
-		commitChanges();
-  */
+
+        // update Species again, now for the new NCBI listings
+        updateTaxonIds(speciesColl);
     }
 
 
