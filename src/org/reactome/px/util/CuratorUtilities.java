@@ -2430,6 +2430,11 @@ public class CuratorUtilities
         updateTaxonIds(speciesColl);
     }
 
+    // Generates tab listing of all curated rice genes (+ CatalystActivity, GO, EC when available) w/ pathway(s) and
+	// reaction(s), coupled with all projected genes in our PR species set
+	private void orthologyExporter() throws Exception {
+		System.out.println("");
+	}
 
 	/**
 	 * Constructor: Establish logger and configs.
@@ -2476,7 +2481,8 @@ public class CuratorUtilities
 			//run_utilities.dumpRiceProjectionReactionTable();
 			//run_utilities.dumpGeneCountsInPathwaysBySpecies();
 			//run_utilities.ensemblGeneDump();
-			run_utilities.addTaxonIds();
+			//run_utilities.addTaxonIds();
+			run_utilities.orthologyExporter();
 	        // create and attach IE to changes; commit changes
     		//run_utilities.commitChanges();
         }
