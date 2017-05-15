@@ -171,7 +171,7 @@ public class CuratorUtilities
 			Element elm = (Element)its.next();
 			Collection<GKInstance> species = (Collection<GKInstance>)(uniAdaptor).fetchInstanceByAttribute(
 					ReactomeJavaConstants.Species, 
-					ReactomeJavaConstants.name,
+					ReactomeJavaConstants._displayName,
 					"=",
 					elm.getValue());
 			for (GKInstance curr_species : species)
@@ -1703,6 +1703,8 @@ public class CuratorUtilities
         System.out.println("Total RGPs: " + count);
     }
 
+
+
     private void dumpRGPsBinnedByPathway() throws Exception {
     	int count = 0;
 
@@ -2187,8 +2189,202 @@ public class CuratorUtilities
         //sb.append("\n");
     	System.out.println(sb.toString());
     }
-    
-    // for UniProt-identified entities, displayNames and other attributes have stale LOCs from old, pre-UniProt settings
+
+	/**********************/
+	private String buildProjectedGeneCols(Collection<GKInstance> curPathways, String OsRXNname, Long OsRXNid,
+											  Long PrjRxnID, GKInstance physEnt) throws Exception {
+		// get each gene's inferred orthologs (inferredTo attr)
+
+		String refGeneDetails = "";
+
+		GKInstance re = (GKInstance)physEnt.getAttributeValue(ReactomeJavaConstants.referenceEntity);
+		if (re != null) {
+			String refGeneName = "";
+			String refRGPDBID = "";
+			// get ref species EWAS, RGP id, and Os id
+			GKInstance refEWAS = (GKInstance)physEnt.getAttributeValue(ReactomeJavaConstants.inferredFrom);
+			if (refEWAS != null) {
+				GKInstance refRGP = (GKInstance)refEWAS.getAttributeValue(ReactomeJavaConstants.referenceEntity);
+				if (refRGP != null) {
+					if (refRGP.getAttributeValue(ReactomeJavaConstants.geneName) != null) {
+						List<String> refGeneNames = (List<String>)refRGP.getAttributeValuesList(ReactomeJavaConstants.geneName);
+						if (refGeneNames != null) {
+							for (String rGN : refGeneNames) {
+								if (rGN.toUpperCase().startsWith("OS") && rGN.length() == 12) {
+									refGeneName = rGN;
+									break;
+								}
+							}
+							if (refGeneName.isEmpty())
+								refGeneName = refGeneNames.get(0);
+						}
+					}
+					refRGPDBID = refRGP.getDBID().toString();
+				}
+			}
+			String rgpIdentifier = re.getAttributeValue(ReactomeJavaConstants.identifier).toString();
+
+			// loop through pathways to generate all pathway-reaction-gene correlations
+			if (curPathways != null) {
+				for (Iterator<?> itP = curPathways.iterator(); itP.hasNext();) {
+					GKInstance curP = (GKInstance) itP.next();
+
+					if (curP != null) {
+						String OsPwyName = (curP.getDisplayName() != null ? curP.getDisplayName() : "no name");
+						String OsPwyID = (curP.getDBID() != null ? curP.getDBID().toString() : "no id");
+
+						if (rgpIdentifier != null) {
+							refGeneDetails = OsPwyName + "\t" + OsPwyID + "\t"
+									+ OsRXNname + "\t" + OsRXNid + "\t" + PrjRxnID + "\t"
+									+ refGeneName + "\t" + refRGPDBID + "\t"
+									+ rgpIdentifier + "\t" + re.getDBID() + "\n";
+						}
+					}
+				}
+			}
+		}
+		//System.out.print(refGeneDetails);
+		return refGeneDetails;
+	}
+
+	private StringBuilder prettyPrintOrthologyExporterRows(GKInstance curInstance, Collection<GKInstance> curPathways, String reactionName, String activity, String GO_MF, String EC, StringBuilder sb) throws Exception {
+		String Os_Gene_ID = "";
+		String OsGeneID_regex = "OS..G.*";
+
+		GKInstance curRGP = (GKInstance)curInstance.getAttributeValue(ReactomeJavaConstants.referenceEntity);
+		if (curRGP != null) {
+			Collection<String> geneNames = curRGP.getAttributeValuesList(ReactomeJavaConstants.geneName);
+			for (String geneName : geneNames) {
+				if (geneName.toUpperCase().matches(OsGeneID_regex)) {
+					Os_Gene_ID = geneName;
+					break;
+				}
+			}
+		}
+		// run loop to display each row (reaction may belong to >1 pathway, need to repeat gene listings)
+		for (GKInstance curPathway : curPathways) {
+			sb.append(Os_Gene_ID + "\t" + curInstance.getDisplayName() + "\t" + curPathway.getDisplayName() + "\t" + reactionName + "\t" + activity + "\t" + GO_MF + "\t" + EC);
+			// build orthologous gene cols from curInstance.inferredTo attr
+			// TODO: you will actually have to build this via a species-pairing and counting setup
+			Collection<GKInstance> orthoColl = curInstance.getAttributeValuesList("inferredTo");
+			for (GKInstance ortho : orthoColl) {
+				sb.append("\t" + ortho.getDisplayName());
+			}
+		}
+		return sb;
+	}
+
+	// Generates tab listing of all curated rice genes (+ CatalystActivity, GO, EC when available) w/ pathway(s) and
+	// reaction(s), coupled with all projected genes in our PR species set
+	private void orthologyExporter() throws Exception {
+		// build the list of species names
+		Collection<GKInstance> speciesColl = dbAdaptor.fetchInstancesByClass(ReactomeJavaConstants.Species);
+		List<GKInstance> speciesList = new ArrayList();
+		for (GKInstance speciesIns : speciesColl) {
+			if (target_taxa.contains(speciesIns)) {
+				speciesList.add(speciesIns);
+			}
+		}
+		Collections.sort(speciesList, new speciesNameComparator());
+
+		StringBuilder sb = new StringBuilder();
+		sb.append("Os_Gene_ID\t"
+				+ "Os Display Name\t"
+				+ "Pathway\t"
+				+ "Reaction\t"
+				+ "Activity\t"
+				+ "GO_MF\t"
+				+ "EC\t"
+		);
+
+		// ...followed by gene lists in projected species
+		for (GKInstance species : speciesList) {
+			sb.append("\t" + species.getDisplayName().replace(' ','_'));
+		}
+		sb.append("\n");
+		// iterate through O.sativa reactions
+		GKInstance Osativa = dbAdaptor.fetchInstance(186860L);
+		Collection<?> OSreactions = dbAdaptor.fetchInstanceByAttribute(
+				ReactomeJavaConstants.Reaction,
+				ReactomeJavaConstants.species,
+				"=",
+				Osativa);
+		for (Iterator<?> itR = OSreactions.iterator(); itR.hasNext(); ) {
+			GKInstance curR = (GKInstance) itR.next();
+			// get parent pathways of this reaction
+			Collection<GKInstance> curPathways = curR.getReferers(ReactomeJavaConstants.hasEvent);
+
+			// init for each reaction
+			String activity = "";
+			String GO_MF = "";
+			String EC = "";
+
+			// start with CatalystActivity (if it exists)
+			Collection<GKInstance> cas = curR.getAttributeValuesList(ReactomeJavaConstants.catalystActivity);
+			if (cas != null) {
+				for (GKInstance curCA : cas) {
+
+					// get GO_MF and EC, if existing, for this Os reaction
+					GKInstance curGO_MF = (GKInstance) curCA.getAttributeValue(ReactomeJavaConstants.activity);
+					if (curGO_MF != null) {
+						activity = curGO_MF.getDisplayName();
+						GO_MF = "GO:" + curGO_MF.getAttributeValue(ReactomeJavaConstants.accession).toString();
+						// there are many EC dupes (related to orthoinference scripts?); the first one will do
+						if (curGO_MF.getAttributeValuesList(ReactomeJavaConstants.ecNumber) != null)
+							if (curGO_MF.getAttributeValuesList(ReactomeJavaConstants.ecNumber).size() > 0)
+								EC = curGO_MF.getAttributeValuesList(ReactomeJavaConstants.ecNumber).get(0).toString();
+							else
+								EC = "";
+						else
+							EC = "";
+					} else {
+						activity = curCA.getDisplayName();
+						GO_MF = "";
+						EC = "";
+					}
+
+					// get genes in this reaction
+					// get EWAS (via Catalystactivity.PhysicalEntity)
+					GKInstance pe = (GKInstance)curCA.getAttributeValue(ReactomeJavaConstants.physicalEntity);
+					if (pe != null) {
+						// is EWAS? get refEntity (RGP) identifier (Uniprot) and stop
+						if (pe.getSchemClass().getName().equals(ReactomeJavaConstants.EntityWithAccessionedSequence)) {
+							sb = prettyPrintOrthologyExporterRows(pe, curPathways, curR.getDisplayName(), activity, GO_MF, EC, sb);
+						}
+						// else, is DefinedSet?
+						else {
+							if (pe.getSchemClass().getName().equals(ReactomeJavaConstants.DefinedSet)) {
+								// get hasMember collection
+								List<GKInstance> members = (List<GKInstance>)pe.getAttributeValuesList(ReactomeJavaConstants.hasMember);
+								for (GKInstance member : members) {
+									// is EWAS? get refEntity (RGP) identifier (Uniprot)
+									if (member.getSchemClass().getName().equals(ReactomeJavaConstants.EntityWithAccessionedSequence)) {
+										sb = prettyPrintOrthologyExporterRows(member, curPathways, curR.getDisplayName(), activity, GO_MF, EC, sb);
+										// is it a Complex?
+									} else {
+										// get the EWAS
+										if (member.getSchemClass().getName().equals(ReactomeJavaConstants.Complex)) {
+											// get hasMember collection
+											List<GKInstance> cPXmembers = (List<GKInstance>)pe.getAttributeValuesList(ReactomeJavaConstants.hasMember);
+											for (GKInstance cPXmember : cPXmembers) {
+												// is EWAS? get refEntity (RGP) identifier (Uniprot)
+												if (cPXmember.getSchemClass().getName().equals(ReactomeJavaConstants.EntityWithAccessionedSequence)) {
+													sb = prettyPrintOrthologyExporterRows(cPXmember, curPathways, curR.getDisplayName(), activity, GO_MF, EC, sb);
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		System.out.println(sb.toString());
+	}
+
+	// for UniProt-identified entities, displayNames and other attributes have stale LOCs from old, pre-UniProt settings
     private void removeStaleLOCs() throws Exception {
 
     	int count = 0;
@@ -2429,12 +2625,6 @@ public class CuratorUtilities
         // update Species again, now for the new NCBI listings
         updateTaxonIds(speciesColl);
     }
-
-    // Generates tab listing of all curated rice genes (+ CatalystActivity, GO, EC when available) w/ pathway(s) and
-	// reaction(s), coupled with all projected genes in our PR species set
-	private void orthologyExporter() throws Exception {
-		System.out.println("");
-	}
 
 	/**
 	 * Constructor: Establish logger and configs.
