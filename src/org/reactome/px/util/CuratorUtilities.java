@@ -2381,25 +2381,62 @@ public class CuratorUtilities
 								// get hasMember collection
 								List<GKInstance> members = (List<GKInstance>)pe.getAttributeValuesList(ReactomeJavaConstants.hasMember);
 								for (GKInstance member : members) {
-									// is EWAS? get refEntity (RGP) identifier (Uniprot)
-									if (member.getSchemClass().getName().equals(ReactomeJavaConstants.EntityWithAccessionedSequence)) {
-										prettyPrintOrthologyExporterRows(member, curPathways, curR.getDisplayName(), activity, GO_MF, EC, speciesHmap);
-									}
-									else {
-										// is it a Complex?
-										if (member.getSchemClass().getName().equals(ReactomeJavaConstants.Complex)) {
-											// get hasMember collection
-											List<GKInstance> cPXmembers = (List<GKInstance>)pe.getAttributeValuesList(ReactomeJavaConstants.hasMember);
-											for (GKInstance cPXmember : cPXmembers) {
-												// is EWAS? get refEntity (RGP) identifier (Uniprot)
-												if (cPXmember.getSchemClass().getName().equals(ReactomeJavaConstants.EntityWithAccessionedSequence)) {
-													prettyPrintOrthologyExporterRows(cPXmember, curPathways, curR.getDisplayName(), activity, GO_MF, EC, speciesHmap);
-												}
-											}
-										}
-									}
-								}
+                                    // is EWAS? get refEntity (RGP) identifier (Uniprot)
+                                    if (member.getSchemClass().getName().equals(ReactomeJavaConstants.EntityWithAccessionedSequence)) {
+                                        prettyPrintOrthologyExporterRows(member, curPathways, curR.getDisplayName(), activity, GO_MF, EC, speciesHmap);
+                                    } else {
+                                        // is it a Complex?
+                                        if (member.getSchemClass().getName().equals(ReactomeJavaConstants.Complex)) {
+                                            // get hasMember collection
+                                            List<GKInstance> cPXmembers = (List<GKInstance>) member.getAttributeValuesList(ReactomeJavaConstants.hasComponent);
+                                            for (GKInstance cPXmember : cPXmembers) {
+                                                // is EWAS? get refEntity (RGP) identifier (Uniprot)
+                                                if (cPXmember.getSchemClass().getName().equals(ReactomeJavaConstants.EntityWithAccessionedSequence)) {
+                                                    prettyPrintOrthologyExporterRows(cPXmember, curPathways, curR.getDisplayName(), activity, GO_MF, EC, speciesHmap);
+                                                }
+                                            }
+                                        } else {
+                                            // is DefinedSet?
+                                            if (member.getSchemClass().getName().equals(ReactomeJavaConstants.DefinedSet)) {
+                                                // get hasMember collection
+                                                List<GKInstance> membersNested = (List<GKInstance>) pe.getAttributeValuesList(ReactomeJavaConstants.hasMember);
+                                                for (GKInstance memberNested : membersNested) {
+                                                    // is EWAS? get refEntity (RGP) identifier (Uniprot)
+                                                    if (memberNested.getSchemClass().getName().equals(ReactomeJavaConstants.EntityWithAccessionedSequence)) {
+                                                        prettyPrintOrthologyExporterRows(memberNested, curPathways, curR.getDisplayName(), activity, GO_MF, EC, speciesHmap);
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
 							}
+							else {
+                                // is it a Complex?
+                                if (pe.getSchemClass().getName().equals(ReactomeJavaConstants.Complex)) {
+                                    // get hasMember collection
+                                    List<GKInstance> cPXmembers = (List<GKInstance>) pe.getAttributeValuesList(ReactomeJavaConstants.hasComponent);
+                                    for (GKInstance cPXmember : cPXmembers) {
+                                        // is EWAS? get refEntity (RGP) identifier (Uniprot)
+                                        if (cPXmember.getSchemClass().getName().equals(ReactomeJavaConstants.EntityWithAccessionedSequence)) {
+                                            prettyPrintOrthologyExporterRows(cPXmember, curPathways, curR.getDisplayName(), activity, GO_MF, EC, speciesHmap);
+                                        }
+                                    }
+                                }
+                                else {
+                                    // is DefinedSet?
+                                    if (pe.getSchemClass().getName().equals(ReactomeJavaConstants.DefinedSet)) {
+                                        // get hasMember collection
+                                        List<GKInstance> members = (List<GKInstance>) pe.getAttributeValuesList(ReactomeJavaConstants.hasMember);
+                                        for (GKInstance member : members) {
+                                            // is EWAS? get refEntity (RGP) identifier (Uniprot)
+                                            if (member.getSchemClass().getName().equals(ReactomeJavaConstants.EntityWithAccessionedSequence)) {
+                                                prettyPrintOrthologyExporterRows(member, curPathways, curR.getDisplayName(), activity, GO_MF, EC, speciesHmap);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
 						}
 					}
 				}
@@ -2409,7 +2446,7 @@ public class CuratorUtilities
 	}
 
 	// for UniProt-identified entities, displayNames and other attributes have stale LOCs from old, pre-UniProt settings
-    private void removeStaleLOCs() throws Exception {
+    private void renameLOCs() throws Exception {
 
     	int count = 0;
     	class speciesNameComparator implements Comparator<GKInstance>{
@@ -2691,7 +2728,7 @@ public class CuratorUtilities
 	        //run_utilities.dumpQuickSearchTermsForGrameneSearchIndex();
 	        //run_utilities.dumpProjectionStats(false); // for PR data releases - stats page
 	        //run_utilities.exportReactionProjectionTable(); // for PR data releases - Gramoogle
-	        //run_utilities.removeStaleLOCs();
+	        //run_utilities.renameStaleLOCs();
 			//run_utilities.dumpRiceProjectionReactionTable();
 			//run_utilities.dumpGeneCountsInPathwaysBySpecies();
 			//run_utilities.ensemblGeneDump();
