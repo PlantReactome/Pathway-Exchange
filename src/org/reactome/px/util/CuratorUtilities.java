@@ -290,7 +290,7 @@ public class CuratorUtilities
      * 
      */
     @SuppressWarnings("unchecked")
-    private void listRiceRGPs(boolean hasUniProt) throws Exception
+    private void listRiceRGPs(boolean hasUniProt, boolean prioritizeOS) throws Exception
     {
     	if (hasUniProt) {
 	    	logger.info("Collecting RGP identifiers matching refDB UniProt");
@@ -314,15 +314,28 @@ public class CuratorUtilities
 	        		List<String> geneNames = rgp.getAttributeValuesList(ReactomeJavaConstants.geneName);
 	    			for (Iterator<String> it = geneNames.iterator(); it.hasNext();) {
 	    	            String currName = (String)it.next().toUpperCase();
-	    	            // grab the curated rice RGPs with LOC identifiers for mapping (majority)  
-	    	            if (currName.startsWith("LOC_")) {
-	    	            	gene_id = currName;
-	        				break;
-	        			}
-	    	            // and more recently curated rice RGPs with OS ids and no LOC (minority)   
-	        			if (currName.toUpperCase().startsWith("OS") && currName.length() == 12) {
-	        				gene_id = currName;
-	        			}
+						// try prioritizing OS over LOC values from geneNames, see what the counts look like
+						if (prioritizeOS) {
+							// grab more recently curated rice RGPs with OS ids, and all RGPs with an OS somewhere
+							if (currName.toUpperCase().startsWith("OS") && currName.length() == 12) {
+								gene_id = currName;
+								break;
+							}
+							// then grab the curated rice RGPs with LOC identifiers, if that is all that's available
+							if (currName.startsWith("LOC_")) {
+								gene_id = currName;
+							}
+						} else { // prioritize LOC
+							// grab the curated rice RGPs with LOC identifiers for mapping (majority)
+							if (currName.startsWith("LOC_")) {
+								gene_id = currName;
+								break;
+							}
+							// and more recently curated rice RGPs with OS ids and no LOC (minority)
+							if (currName.toUpperCase().startsWith("OS") && currName.length() == 12) {
+								gene_id = currName;
+							}
+						}
 	        		}
 	        	}
 	        	if (gene_id.length() > 0) {
@@ -1695,7 +1708,7 @@ public class CuratorUtilities
     }
 
 
-
+	// used to gather data for PR indexing in Gramene: put in gene_ids_by_pathway_and_species.tab
     private void dumpRGPsBinnedByPathway() throws Exception {
     	int count = 0;
 
@@ -1742,8 +1755,8 @@ public class CuratorUtilities
 		                		String rgpIdentifier = curPE.getAttributeValue(ReactomeJavaConstants.identifier).toString();
 			            		if (rgpIdentifier != null) {
 		            				//System.out.println(rgpIdentifier + "\t" + curPathwayID + "\t" + curPathwayName + "\t" + curPathwaySpeciesName);
-		            				System.out.println(curPathwayID + "\t" + curPathwayName + "\t" + curPathwaySpeciesName + "\t" + rgpIdentifier);
-									//System.out.println(((curStableID != null) ? curStableID : curPathwayID) + "\t" + curPathwayName + "\t" + curPathwaySpeciesName + "\t" + rgpIdentifier);
+		            				//System.out.println(curPathwayID + "\t" + curPathwayName + "\t" + curPathwaySpeciesName + "\t" + rgpIdentifier);
+									System.out.println(((curStableID != null) ? curStableID : curPathwayID) + "\t" + curPathwayName + "\t" + curPathwaySpeciesName + "\t" + rgpIdentifier);
 		            				//System.out.println(rgpIdentifier); // JP used to grep a specific pathway's RGPs
 			            			count++;
 			            		}
@@ -2687,6 +2700,14 @@ public class CuratorUtilities
         updateTaxonIds(speciesColl);
     }
 
+    // rename LOCs to OS (if available) on slice
+	private void renameStaleLOCs() throws Exception {
+		//grab all EWAS with "(LOC", get corresponding RGP
+		// find OS in RGP.geneName if exists, set as EWAS name(0), update displayName
+		// search for CA with same LOC as EWAS, if exists, remove LOC from CA name/displayName
+	}
+
+
 	/**
 	 * Constructor: Establish logger and configs.
 	 */
@@ -2708,7 +2729,6 @@ public class CuratorUtilities
 	        //run_utilities.testUpdate1();
 	        //run_utilities.testUpdate2(run_utilities.target_instances);
 	        //run_utilities.updateRGPsWithUniProtKBData();
-	        //run_utilities.listRiceRGPs(true); // for PR data releases; pre-projection
 	        //run_utilities.listAthRGPs();
 	        //run_utilities.deleteReactomeDataByInstanceEdit();
 	        //run_utilities.profileAthIsoforms();
@@ -2723,17 +2743,20 @@ public class CuratorUtilities
 	        //run_utilities.listNewRefMols();
 	        //run_utilities.grameneSolrExporter(); // for PR data releases - v2, obsolete
 	        //run_utilities.dumpRGPsBinnedByPathwayOld();
-	        //run_utilities.dumpRGPsBinnedByPathway(); // for PR data releases
 	        //run_utilities.dumpPathwayDiagramTermsForGrameneSearchIndex();
 	        //run_utilities.dumpQuickSearchTermsForGrameneSearchIndex();
-	        //run_utilities.dumpProjectionStats(false); // for PR data releases - stats page
 	        //run_utilities.exportReactionProjectionTable(); // for PR data releases - Gramoogle
-	        //run_utilities.renameStaleLOCs();
 			//run_utilities.dumpRiceProjectionReactionTable();
 			//run_utilities.dumpGeneCountsInPathwaysBySpecies();
 			//run_utilities.ensemblGeneDump();
 			//run_utilities.addTaxonIds();
-			run_utilities.orthologyExporter();
+			//run_utilities.orthologyExporter();
+			//run_utilities.renameStaleLOCs();
+
+			//run_utilities.listRiceRGPs(true, false); // for PR data releases; pre-projection
+			run_utilities.dumpProjectionStats(true); // for PR data releases - stats page, tab or html
+			//run_utilities.dumpRGPsBinnedByPathway(); // for PR data releases, for Gramene search index: gene_ids_by_pathway_and_species.tab
+
 	        // create and attach IE to changes; commit changes
     		//run_utilities.commitChanges();
         }
