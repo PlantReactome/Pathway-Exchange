@@ -295,10 +295,14 @@ public class CuratorUtilities
     	if (hasUniProt) {
 	    	logger.info("Collecting RGP identifiers matching refDB UniProt");
 	    	
-	    	Collection<GKInstance> c = uniAdaptor.fetchInstanceByAttribute(ReactomeJavaConstants.ReferenceGeneProduct, 
-	    			ReactomeJavaConstants.referenceDatabase, 
+	    	//Collection<GKInstance> c = uniAdaptor.fetchInstanceByAttribute(ReactomeJavaConstants.ReferenceGeneProduct,
+            Collection<GKInstance> c = uniAdaptor.fetchInstanceByAttribute(ReactomeJavaConstants.ReferenceSequence,
+            //Collection<GKInstance> c = uniAdaptor.fetchInstanceByAttribute(ReactomeJavaConstants.ReferenceRNASequence,
+                            ReactomeJavaConstants.referenceDatabase,
 	    			"=", 
-	    			2L);  // UniProt
+	    			//2L);  // UniProt
+                    //1606610L);  // miRBase
+                    8986727L);  // Ensembl-Gramene
 	    	logger.info("raw size: " + c.size());
 	    	String refDb = new String();
 	    	String uniprot_id = new String();
@@ -324,7 +328,13 @@ public class CuratorUtilities
 							// then grab the curated rice RGPs with LOC identifiers, if that is all that's available
 							if (currName.startsWith("LOC_")) {
 								gene_id = currName;
+								break;
 							}
+                            // then grab miRBase entries for RNA
+                            if (currName.startsWith("MI")) {
+                                gene_id = currName;
+								break;
+                            }
 						} else { // prioritize LOC
 							// grab the curated rice RGPs with LOC identifiers for mapping (majority)
 							if (currName.startsWith("LOC_")) {
@@ -333,6 +343,10 @@ public class CuratorUtilities
 							}
 							// and more recently curated rice RGPs with OS ids and no LOC (minority)
 							if (currName.toUpperCase().startsWith("OS") && currName.length() == 12) {
+								gene_id = currName;
+							}
+							// then grab miRBase entries for RNA
+							if (currName.startsWith("MI")) {
 								gene_id = currName;
 							}
 						}
@@ -1902,7 +1916,7 @@ public class CuratorUtilities
     				+ "\n" + "<tr bgcolor=\"#C2D998\"><td><b>Species</b></td><td><b>Pathways</b></td><td><b>Reactions</b></td><td><b>Gene Products</b></td></tr>"
     				);
     	else
-    		sb.append("Species\tPathways\tReactions\tGene Products");
+    		sb.append("Species\tPathways\tReactions\tGenes");
     	
     	// get list of species, sort it, place Oryza at the top
         Collection<GKInstance> speciesColl = dbAdaptor.fetchInstancesByClass(ReactomeJavaConstants.Species);
@@ -2708,6 +2722,24 @@ public class CuratorUtilities
 	}
 
 
+	private void stringTest() {
+		String refName = "UniProt:test0 (1X)";
+		String geneNames = "[\"test1\",\"testB\",\"test2\",\"test0\",\"test6\"]";
+		if (geneNames != null && geneNames.length() > 0) {
+			geneNames = (geneNames.substring(1, geneNames.length()-1)).replaceAll("\"","");
+			String[] aryGeneNames = geneNames.split(",");
+			List<String> listGeneNames = Arrays.asList(aryGeneNames);
+			// remove any name that is listed in the reference gene name found in displayName
+			String filteredGeneNames = "";
+			for (String name : listGeneNames) {
+				if (!refName.contains(name))
+					filteredGeneNames += ", " + name;
+			}
+			refName += filteredGeneNames;
+		}
+		System.out.println(refName);
+	}
+
 	/**
 	 * Constructor: Establish logger and configs.
 	 */
@@ -2754,8 +2786,9 @@ public class CuratorUtilities
 			//run_utilities.renameStaleLOCs();
 
 			//run_utilities.listRiceRGPs(true, false); // for PR data releases; pre-projection
-			run_utilities.dumpProjectionStats(true); // for PR data releases - stats page, tab or html
+			run_utilities.dumpProjectionStats(false); // for PR data releases - stats page, tab or html
 			//run_utilities.dumpRGPsBinnedByPathway(); // for PR data releases, for Gramene search index: gene_ids_by_pathway_and_species.tab
+			//run_utilities.stringTest();
 
 	        // create and attach IE to changes; commit changes
     		//run_utilities.commitChanges();
