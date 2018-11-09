@@ -2786,7 +2786,7 @@ public class CuratorUtilities
 			//run_utilities.renameStaleLOCs();
 
 			//run_utilities.listRiceRGPs(true, false); // for PR data releases; pre-projection
-			run_utilities.dumpProjectionStats(false); // for PR data releases - stats page, tab or html
+			run_utilities.dumpProjectionStats(true); // for PR data releases - stats page, tab or html
 			//run_utilities.dumpRGPsBinnedByPathway(); // for PR data releases, for Gramene search index: gene_ids_by_pathway_and_species.tab
 			//run_utilities.stringTest();
 

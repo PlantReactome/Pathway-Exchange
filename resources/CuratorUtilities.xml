@@ -1,14 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <utility_settings>
-	<db_connection_info host="" port="" name="" user="" pwd=""/>
+	<db_connection_info host="floret.cgrb.oregonstate.edu" port="3306" name="test_slice_oryza_sativa_16c_ortho_osat_all" user="react-app-user" pwd="react-app-user_pw"/>
+	<!--db_connection_info host="floret.cgrb.oregonstate.edu" port="3306" name="test_slice_oryza_sativa_16" user="react-app-user" pwd="react-app-user_pw"/-->
+	<!--db_connection_info host="reactomecurator.oicr.on.ca" port="3306" name="gk_central" user="authortool" pwd="T001test"/-->
+	<!--db_connection_info host="floret.cgrb.oregonstate.edu" port="3306" name="Os_identity_revisions" user="react-app-user" pwd="react-app-user_pw"/-->
+	<!--data_file path="/home/preecej/Documents/projects/plant_reactome/plant_reactome_site/projection/2014_rice_conference/brassinosteroid_signaling_V4.rtpj"/-->
 	<target_taxa>
 		<species NCBI_id="4530">Oryza sativa</species>
-		<species NCBI_id="4530">Oryza sativa subsp. japonica</species> <!-- spoofing the NCBI id -->
-		<species NCBI_id="37682">Aegilops tauschii</species>
+		<!--<species NCBI_id="4530">Oryza sativa subsp. japonica</species>--> <!-- spoofing the NCBI id -->
+		<!--species NCBI_id="2769">Chondrus crispus</species>
+		<species NCBI_id=""></species>
+		<species NCBI_id=""></species>
+		<species NCBI_id=""></species>
+		<species NCBI_id=""></species>
+		<species NCBI_id=""></species>
+		<species NCBI_id=""></species>
+		<species NCBI_id=""></species-->
+
+		<!--species NCBI_id="37682">Aegilops tauschii</species>
 		<species NCBI_id="13333">Amborella trichopoda</species>
-		<species NCBI_id="81972">Arabidopsis lyrata</species>
-		<species NCBI_id="3702">Arabidopsis thaliana</species>
-		<species NCBI_id="130453">Arachis duranensis</species>
+		<species NCBI_id="81972">Arabidopsis lyrata</species-->
+		<!--species NCBI_id="3702">Arabidopsis thaliana</species-->
+		<!--species NCBI_id="130453">Arachis duranensis</species>
 		<species NCBI_id="130454">Arachis ipaensis</species>
 		<species NCBI_id="161934">Beta vulgaris</species>
 		<species NCBI_id="15368">Brachypodium distachyon</species>
@@ -34,20 +47,19 @@
 		<species NCBI_id="3880">Medicago truncatula</species>
 		<species NCBI_id="4155">Mimulus guttatus</species>
 		<species NCBI_id="4641">Musa acuminata</species>
-		<species NCBI_id="39946">Oryza sativa subsp. indica</species>
-		<species NCBI_id="1736659">Oryza australiensis</species>
-		<species NCBI_id="110450">Oryza granulata</species>
-		<!--species NCBI_id="4530">Oryza kasalath</species--> <!-- is a strain of O.sativa -->
-		<species NCBI_id="4528">Oryza longistaminata</species>
-		<species NCBI_id="63629">Oryza minuta</species>
-		<species NCBI_id="4535">Oryza officinalis</species>
-		<species NCBI_id="40149">Oryza meridionalis</species>
+		<species NCBI_id="4532">Oryza australiensis</species>
 		<species NCBI_id="65489">Oryza barthii</species>
-		<species NCBI_id="4536">Oryza nivara</species>
 		<species NCBI_id="4533">Oryza brachyantha</species>
 		<species NCBI_id="4538">Oryza glaberrima</species>
-		<species NCBI_id="4537">Oryza punctata</species>
 		<species NCBI_id="40148">Oryza glumaepatula</species>
+		<species NCBI_id="110450">Oryza granulata</species>
+		<species NCBI_id="1736659">Oryza kasalath</species>
+		<species NCBI_id="4528">Oryza longistaminata</species>
+		<species NCBI_id="40149">Oryza meridionalis</species>
+		<species NCBI_id="63629">Oryza minuta</species>
+		<species NCBI_id="4536">Oryza nivara</species>
+		<species NCBI_id="4535">Oryza officinalis</species>
+		<species NCBI_id="4537">Oryza punctata</species>
 		<species NCBI_id="4529">Oryza rufipogon</species>
 		<species NCBI_id="39946">Oryza sativa Indica</species>
 		<species NCBI_id="242159">Ostreococcus lucimarinus</species>
@@ -70,7 +82,7 @@
 		<species NCBI_id="4571">Triticum turgidum</species>
 		<species NCBI_id="4572">Triticum urartu</species>
 		<species NCBI_id="29760">Vitis vinifera</species>
-		<species NCBI_id="4577">Zea mays</species>
+		<species NCBI_id="4577">Zea mays</species-->
 	</target_taxa>
 	<designated_species>Oryza sativa</designated_species>
 	<!--designated_species>Arabidopsis thaliana</designated_species-->
