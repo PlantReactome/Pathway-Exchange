@@ -295,14 +295,14 @@ public class CuratorUtilities
     	if (hasUniProt) {
 	    	logger.info("Collecting RGP identifiers matching refDB UniProt");
 	    	
-	    	//Collection<GKInstance> c = uniAdaptor.fetchInstanceByAttribute(ReactomeJavaConstants.ReferenceGeneProduct,
-            Collection<GKInstance> c = uniAdaptor.fetchInstanceByAttribute(ReactomeJavaConstants.ReferenceSequence,
+	    	Collection<GKInstance> c = uniAdaptor.fetchInstanceByAttribute(ReactomeJavaConstants.ReferenceGeneProduct,
+            //Collection<GKInstance> c = uniAdaptor.fetchInstanceByAttribute(ReactomeJavaConstants.ReferenceSequence,
             //Collection<GKInstance> c = uniAdaptor.fetchInstanceByAttribute(ReactomeJavaConstants.ReferenceRNASequence,
                             ReactomeJavaConstants.referenceDatabase,
 	    			"=", 
-	    			//2L);  // UniProt
+	    			2L);  // UniProt
                     //1606610L);  // miRBase
-                    8986727L);  // Ensembl-Gramene
+                    //8986727L);  // Ensembl-Gramene
 	    	logger.info("raw size: " + c.size());
 	    	String refDb = new String();
 	    	String uniprot_id = new String();
@@ -1999,7 +1999,12 @@ public class CuratorUtilities
 				Osativa);
         for (Iterator<?> itR = OSreactions.iterator(); itR.hasNext();) {
             GKInstance curR = (GKInstance) itR.next();
-            sb.append(curR.getDisplayName() + "\t1");
+			List<GKInstance> curPathways = (List<GKInstance>) curR.getReferers(ReactomeJavaConstants.hasEvent);
+			String curPname = null;
+			for (GKInstance curPathway : curPathways) {
+				curPname = curPathway.getDisplayName();
+			}
+            sb.append(curPname + "\t" + curR.getDisplayName() + "\t1");
             
             // get orthologousEvents for current Reaction, look for a species match in each one
             Collection<GKInstance> orthoEvents = curR.getAttributeValuesList(ReactomeJavaConstants.orthologousEvent);
@@ -2014,6 +2019,7 @@ public class CuratorUtilities
 	    					isPresent = true;
 	                }
 		            if (isPresent)
+		            	//Collection<GKInstance> ortho_genes
                     	sb.append("\t1");
                     else
                     	sb.append("\t0");
@@ -2740,6 +2746,37 @@ public class CuratorUtilities
 		System.out.println(refName);
 	}
 
+	/*
+	Generate a list of species in JSON format, with abbv and full taxonmic name. For initial use in BioPAX export, but
+	could be expanded and applied to other processes as needed.
+	Sample output:
+	{
+        "osat":{"name":["Oryza sativa"]},
+        "atha":{"name":["Arabidopsis thaliana"]}
+        ...
+	}
+	 */
+	private void exportSpeciesListJSON() throws Exception {
+		Collection<GKInstance> cSpecies = dbAdaptor.fetchInstancesByClass(ReactomeJavaConstants.Species);
+		HashMap<String,String> hmSpecies = new HashMap<String,String>();
+		int count = 0;
+		for (GKInstance iSpecies : cSpecies) {
+			String speciesName = iSpecies.getDisplayName();
+			String abbv = speciesName.substring(0,1).toLowerCase() + (speciesName.split(" "))[1].substring(0,3);
+			hmSpecies.put(abbv,speciesName);
+			//System.out.println(abbv + ":\"" + speciesName + "\"");
+			//count++;
+		}
+		Map<String,String> tmSpecies = new TreeMap<String,String>(hmSpecies); // sort
+		StringBuilder sb = new StringBuilder();
+		sb.append("{");
+		for (String key : tmSpecies.keySet()) {
+			sb.append("\n\t\"" + key + "\":{\"name\":[\"" + tmSpecies.get(key).toString() + "\"]},");
+		}
+		System.out.println(sb.substring(0,sb.length()-1) + "\n}");
+		//System.out.println("count: " + count);
+	}
+
 	/**
 	 * Constructor: Establish logger and configs.
 	 */
@@ -2778,17 +2815,18 @@ public class CuratorUtilities
 	        //run_utilities.dumpPathwayDiagramTermsForGrameneSearchIndex();
 	        //run_utilities.dumpQuickSearchTermsForGrameneSearchIndex();
 	        //run_utilities.exportReactionProjectionTable(); // for PR data releases - Gramoogle
-			//run_utilities.dumpRiceProjectionReactionTable();
 			//run_utilities.dumpGeneCountsInPathwaysBySpecies();
 			//run_utilities.ensemblGeneDump();
 			//run_utilities.addTaxonIds();
 			//run_utilities.orthologyExporter();
 			//run_utilities.renameStaleLOCs();
 
-			//run_utilities.listRiceRGPs(true, false); // for PR data releases; pre-projection
-			run_utilities.dumpProjectionStats(true); // for PR data releases - stats page, tab or html
+			//run_utilities.listRiceRGPs(true, true); // for PR data releases; pre-projection
+			//run_utilities.dumpProjectionStats(true); // for PR data releases - stats page, tab or html
 			//run_utilities.dumpRGPsBinnedByPathway(); // for PR data releases, for Gramene search index: gene_ids_by_pathway_and_species.tab
-			//run_utilities.stringTest();
+			//run_utilities.stringTest();i
+			//run_utilities.dumpRiceProjectionReactionTable();
+			run_utilities.exportSpeciesListJSON();
 
 	        // create and attach IE to changes; commit changes
     		//run_utilities.commitChanges();
