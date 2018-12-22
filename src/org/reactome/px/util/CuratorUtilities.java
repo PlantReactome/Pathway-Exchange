@@ -2777,6 +2777,16 @@ public class CuratorUtilities
 		//System.out.println("count: " + count);
 	}
 
+	/*
+	look for the existence of instances in curated diagrams
+	 */
+	public void checkDiagramsForDBIDs(String pathToIDFile) throws Exception {
+		// read in list of DBIDs from file, presume ids in first col
+		// Fetch all pathway diagram instances.
+		// Open each diagram with DiagramGKBReader.
+		// Check each component’s reactomeId and see if it is in the lists.
+	}
+
 	/**
 	 * Constructor: Establish logger and configs.
 	 */
@@ -2825,8 +2835,9 @@ public class CuratorUtilities
 			//run_utilities.dumpProjectionStats(true); // for PR data releases - stats page, tab or html
 			//run_utilities.dumpRGPsBinnedByPathway(); // for PR data releases, for Gramene search index: gene_ids_by_pathway_and_species.tab
 			//run_utilities.stringTest();i
-			//run_utilities.dumpRiceProjectionReactionTable();
-			run_utilities.exportSpeciesListJSON();
+			run_utilities.dumpRiceProjectionReactionTable();
+			//run_utilities.exportSpeciesListJSON();
+			//run_utilities.checkDiagramsForDBIDs("/pathToFile.txt"); // TODO: low priority
 
 	        // create and attach IE to changes; commit changes
     		//run_utilities.commitChanges();
