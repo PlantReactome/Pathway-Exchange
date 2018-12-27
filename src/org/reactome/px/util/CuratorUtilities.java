@@ -1969,7 +1969,7 @@ public class CuratorUtilities
 		}
 	}
 
-	// generate raw binary table containing presence/absence of reaction by species
+	// generate raw binary table containing presence/absence of reaction by species; TODO: currently busted, experiment; revert
     private void dumpRiceProjectionReactionTable() throws Exception {
 
     	StringBuilder sb = new StringBuilder();
@@ -1979,7 +1979,7 @@ public class CuratorUtilities
         Collection<GKInstance> speciesColl = dbAdaptor.fetchInstancesByClass(ReactomeJavaConstants.Species);
         List<GKInstance> speciesList = new ArrayList();
         for (GKInstance speciesIns : speciesColl) {
-        	//if (target_taxa.contains(speciesIns)) {
+        	//if (target_taxa.contains(speciesIns)) { // comment out if you don't want to filter
 	        	speciesList.add(speciesIns);
         	//}
         }
@@ -2004,23 +2004,34 @@ public class CuratorUtilities
 			for (GKInstance curPathway : curPathways) {
 				curPname = curPathway.getDisplayName();
 			}
-            sb.append(curPname + "\t" + curR.getDisplayName() + "\t1");
-            
+			// get rice gene count for current reaction
+			Set<GKInstance> curOSRGPs = InstanceUtilities.grepRefPepSeqsFromPathway(curR); // ignore methods name, it works for reactions, too
+
+            //sb.append(curPname + "\t" + curR.getDisplayName() + "\t1");
+			sb.append(curPname + "\t" + curR.getDisplayName() + "\t" + curOSRGPs.size());
+
             // get orthologousEvents for current Reaction, look for a species match in each one
             Collection<GKInstance> orthoEvents = curR.getAttributeValuesList(ReactomeJavaConstants.orthologousEvent);
             if (orthoEvents.size() > 0) {
                 for (GKInstance curPS : speciesList) {
                 	boolean isPresent = false;
-		            for (Iterator<?> itOE = orthoEvents.iterator(); itOE.hasNext();) {
-		                GKInstance curOE = (GKInstance) itOE.next();
+					int orthoEventRGPCount = 0;
+					//GKInstance curOE = new GKInstance();
+					Set<GKInstance> curOERGPs = null;
+					//for (Iterator<?> itOE = orthoEvents.iterator(); itOE.hasNext();) {
+					for (GKInstance curOE : orthoEvents) {
+		                //curOE = (GKInstance) itOE.next();
 		                GKInstance curOES = (GKInstance)curOE.getAttributeValue(ReactomeJavaConstants.species);
 		                // look in each projected species for each orthoEvent
 	    				if (curPS.equals(curOES))
 	    					isPresent = true;
+							orthoEventRGPCount = InstanceUtilities.grepRefPepSeqsFromPathway(curOE).size();
+							break;
 	                }
-		            if (isPresent)
-		            	//Collection<GKInstance> ortho_genes
-                    	sb.append("\t1");
+		            if (isPresent) {
+						//sb.append("\t1");
+						sb.append("\t" + orthoEventRGPCount);
+					}
                     else
                     	sb.append("\t0");
 	            }
@@ -2034,6 +2045,33 @@ public class CuratorUtilities
         sb.append("\n");
     	System.out.println(sb.toString());
     }
+
+	/*
+		Phase 1:
+			build two data structures:
+				one containing key:Os Reaction IDs -> values:str:Reaction,Pathway; int:Os Gene Counts
+				and the other containing sorted species list -> key:Proj.Reactions IDs -> values:int:inferred Gene Counts
+			output as tab-del (pathways, reactions, genes as rows; species as columns)
+				build header by iterating through sorted species list
+				iterate through reactions
+					print pathway, reaction, Os gene count
+					for each Os reaction, iterate through sorted species list by that reaction key and get inferred gene count
+			group-sort on Pathway in spreadsheet app
+		Phase 2:
+			add projected gene NAMES as collections, indexed to reaction
+				each with a sub-coll of all inferred entities keyed by Species
+					get orthologs by getting inferredTo attribute on each gene product entity involved in a reaction
+						(will require extra hash to key on species)
+			or...
+			import orthology files
+			look up orthologs from this import to build projection data structure
+			(try to avoid this)
+		Phase 3:
+			order Species cols into dendrogram, with named clades
+				manually define, or use an external file?
+	 */
+	private void dumpOrthologyByPathwayAndReaction() throws Exception {
+	}
 
     private String buildProjectedReactionsRow(Collection<GKInstance> curPathways, String OsRXNname, Long OsRXNid,
     										Long PrjRxnID, 
@@ -2835,7 +2873,8 @@ public class CuratorUtilities
 			//run_utilities.dumpProjectionStats(true); // for PR data releases - stats page, tab or html
 			//run_utilities.dumpRGPsBinnedByPathway(); // for PR data releases, for Gramene search index: gene_ids_by_pathway_and_species.tab
 			//run_utilities.stringTest();i
-			run_utilities.dumpRiceProjectionReactionTable();
+			//run_utilities.dumpRiceProjectionReactionTable();
+			run_utilities.dumpOrthologyByPathwayAndReaction();
 			//run_utilities.exportSpeciesListJSON();
 			//run_utilities.checkDiagramsForDBIDs("/pathToFile.txt"); // TODO: low priority
 
