@@ -2046,6 +2046,10 @@ public class CuratorUtilities
     	System.out.println(sb.toString());
     }
 
+
+
+
+
 	/*
 		Phase 1:
 			build two data structures:
@@ -2071,6 +2075,107 @@ public class CuratorUtilities
 				manually define, or use an external file?
 	 */
 	private void dumpOrthologyByPathwayAndReaction() throws Exception {
+
+		// class to hold individual Os rxns and their parent pathway, gene count, and projected gene counts per species
+		class OsRxnData {
+			String pName;
+			int geneCount;
+			HashMap<String, Integer> prjSpecies = new HashMap();
+
+			public void setPName(String name) { this.pName = name; }
+			public String getPName() { return this.pName; }
+
+			public void setCount(int count) { this.geneCount = count; }
+			public int getCount() { return this.geneCount; }
+
+			public void setPrjSpecies(String prjName, int prjCount) {
+				this.prjSpecies.put(prjName, prjCount);
+			}
+			public int getPrjSpeciesGeneCount(String key) {
+				if (this.prjSpecies.get(key) != null)
+					return this.prjSpecies.get(key);
+				else
+					return 0;
+			}
+		}
+
+		// build species name List
+		Collection<GKInstance> speciesColl = dbAdaptor.fetchInstancesByClass(ReactomeJavaConstants.Species);
+		List<GKInstance> speciesList = new ArrayList();
+		for (GKInstance speciesIns : speciesColl) {
+			String curSpeciesName = speciesIns.getDisplayName().toString();
+			if (!curSpeciesName.equals("Homo sapiens") && !curSpeciesName.contains("japonica"))
+				speciesList.add(speciesIns);
+		}
+		Collections.sort(speciesList, new speciesNameComparator());
+		//System.out.print(speciesList);
+
+		/* build HashMap containing:
+			Os Rxn name (HashMap K - String)
+				Container object OsRxnData (HashMap V) - see class above
+					:Pwy name (String)
+					:Os gene count (int)
+					Species name (HashMap K - String)
+						:Prj gene count (HashMap V - int)
+		*/
+		HashMap<String, OsRxnData> OsHash = new HashMap();
+		// iterate through O.sativa reactions
+		GKInstance Osativa = dbAdaptor.fetchInstance(186860L);
+		Collection<GKInstance> OSreactions = dbAdaptor.fetchInstanceByAttribute(
+				ReactomeJavaConstants.Reaction,
+				ReactomeJavaConstants.species,
+				"=",
+				Osativa);
+		for (GKInstance curR : OSreactions) {
+			OsRxnData curRxnData = new OsRxnData();
+
+			// get and set pwy name
+			List<GKInstance> curPathways = (List<GKInstance>) curR.getReferers(ReactomeJavaConstants.hasEvent);
+			String curPname = "";
+			for (GKInstance curPathway : curPathways) {
+				curPname = curPathway.getDisplayName();
+			}
+			curRxnData.setPName(curPname);
+
+			// get and set Os gene count for current rxn
+			Set<GKInstance> curOSRGPs = InstanceUtilities.grepRefPepSeqsFromPathway(curR); // ignore methods name, it works for reactions, too
+			curRxnData.setCount(curOSRGPs.size());
+
+			// get and set prj gene counts for current rxn in all proj. species
+			Collection<GKInstance> orthoEvents = curR.getAttributeValuesList(ReactomeJavaConstants.orthologousEvent);
+			if (orthoEvents.size() > 0) {
+				for (GKInstance orthoEvent : orthoEvents) {
+					String curSpeciesName = ((GKInstance)orthoEvent.getAttributeValue(ReactomeJavaConstants.species)).getDisplayName();
+					curRxnData.setPrjSpecies(
+						curSpeciesName,
+						InstanceUtilities.grepRefPepSeqsFromPathway(orthoEvent).size());
+				}
+			}
+
+			// set rxn name, rxnData obj in hash
+			OsHash.put(curR.getDisplayName().toString(), curRxnData);
+
+			//break; // test one time
+		}
+
+		// print out results
+		StringBuilder sb = new StringBuilder();
+		sb.append("Pathway\tReaction\tOryza sativa");
+		for (GKInstance species : speciesList) {
+			sb.append("\t" + species.getDisplayName());
+		}
+		System.out.println(sb);
+		for (Map.Entry<String, OsRxnData> entry : OsHash.entrySet()) {
+			StringBuilder sb2 = new StringBuilder();
+			String cRxnName = entry.getKey();
+			OsRxnData curRxnDataObj = entry.getValue();
+			if (curRxnDataObj.getCount() > 0) {
+				sb2.append(curRxnDataObj.getPName() + "\t" + cRxnName + "\t" + curRxnDataObj.getCount());
+				for (GKInstance curSpecies : speciesList)
+					sb2.append("\t" + curRxnDataObj.getPrjSpeciesGeneCount(curSpecies.getDisplayName()));
+				System.out.println(sb2);
+			}
+		}
 	}
 
     private String buildProjectedReactionsRow(Collection<GKInstance> curPathways, String OsRXNname, Long OsRXNid,
