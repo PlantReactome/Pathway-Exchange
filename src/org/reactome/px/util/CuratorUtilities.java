@@ -2178,7 +2178,118 @@ public class CuratorUtilities
 		}
 	}
 
-    private String buildProjectedReactionsRow(Collection<GKInstance> curPathways, String OsRXNname, Long OsRXNid,
+	/* bin by pathways only, not reactions */
+	private void dumpOrthologyByPathway(boolean includeSuperPathways) throws Exception {
+
+		// class to hold individual Os pathways, gene count, and projected gene counts per species
+		class OsPwyData {
+			int geneCount;
+			HashMap<String, Integer> prjSpecies = new HashMap();
+
+			public void setCount(int count) { this.geneCount = count; }
+			public int getCount() { return this.geneCount; }
+
+			public void setPrjSpecies(String prjName, int prjCount) {
+				this.prjSpecies.put(prjName, prjCount);
+			}
+			public int getPrjSpeciesCount() { return prjSpecies.size(); };
+			public int getPrjSpeciesGeneCount(String key) {
+				if (this.prjSpecies.get(key) != null)
+					return this.prjSpecies.get(key);
+				else
+					return 0;
+			}
+		}
+
+		// build species name List
+		Collection<GKInstance> speciesColl = dbAdaptor.fetchInstancesByClass(ReactomeJavaConstants.Species);
+		List<GKInstance> speciesList = new ArrayList();
+		for (GKInstance speciesIns : speciesColl) {
+			String curSpeciesName = speciesIns.getDisplayName().toString();
+			if (!curSpeciesName.equals("Homo sapiens") && !curSpeciesName.contains("japonica"))
+				speciesList.add(speciesIns);
+		}
+		Collections.sort(speciesList, new speciesNameComparator());
+		//System.out.print(speciesList);
+
+		/* build HashMap containing:
+			Os Pwy name (HashMap K - String)
+				Container object OsPwyData (HashMap V) - see class above
+					:Os gene count (int)
+					Species name (HashMap K - String)
+						:Prj gene count (HashMap V - int)
+		*/
+		HashMap<String, OsPwyData> OsHash = new HashMap();
+		// iterate through O.sativa pathways
+		GKInstance Osativa = dbAdaptor.fetchInstance(186860L);
+		Collection<GKInstance> OSpathways = dbAdaptor.fetchInstanceByAttribute(
+				ReactomeJavaConstants.Pathway,
+				ReactomeJavaConstants.species,
+				"=",
+				Osativa);
+		for (GKInstance curP : OSpathways) {
+
+			if (!includeSuperPathways) {
+				boolean hasParent = false;
+				// check to make sure this isn't a super-pathway; we don't want to generate sub-instance data (rxns, etc.) from those
+				Collection<GKInstance> pwyChildEvents = curP.getAttributeValuesList(ReactomeJavaConstants.hasEvent);
+				for (GKInstance curEvent : pwyChildEvents) {
+					// if the pathway has a child pathway, it's a superpathway
+					if (curEvent.getSchemClass().getName().equals(ReactomeJavaConstants.Pathway)) {
+						hasParent = true;
+						break;
+					}
+				}
+				if (hasParent) continue; // don't bother getting reactions, etc from a superpathway
+			}
+
+			OsPwyData curPwyData = new OsPwyData();
+
+			// get and set Os gene count for current pwy
+			Set<GKInstance> curOSRGPs = InstanceUtilities.grepRefPepSeqsFromPathway(curP);
+			curPwyData.setCount(curOSRGPs.size());
+
+			// get and set prj gene counts for current pwy in all proj. species
+			Collection<GKInstance> orthoEvents = curP.getAttributeValuesList(ReactomeJavaConstants.orthologousEvent);
+			if (orthoEvents.size() > 0) { // make sure there are actually projected orthologous pathways to capture
+				for (GKInstance orthoEvent : orthoEvents) {
+					if (InstanceUtilities.grepRefPepSeqsFromPathway(orthoEvent).size() > 0) { // make sure there are actually projected gene products to capture
+						String curSpeciesName = ((GKInstance) orthoEvent.getAttributeValue(ReactomeJavaConstants.species)).getDisplayName();
+						curPwyData.setPrjSpecies(
+								curSpeciesName,
+								InstanceUtilities.grepRefPepSeqsFromPathway(orthoEvent).size());
+					}
+				}
+			}
+			// set rxn name, rxnData obj in hash
+			OsHash.put(curP.getDisplayName().toString(), curPwyData);
+			//break; // test
+		}
+
+		// print out results
+		StringBuilder sb = new StringBuilder();
+		sb.append("Pathway\tOryza sativa");
+		for (GKInstance species : speciesList) {
+			sb.append("\t" + species.getDisplayName());
+		}
+		System.out.println(sb);
+		for (Map.Entry<String, OsPwyData> entry : OsHash.entrySet()) {
+			StringBuilder sb2 = new StringBuilder();
+			String cPwyName = entry.getKey();
+			OsPwyData curPwyDataObj = entry.getValue();
+			if (curPwyDataObj.getCount() > 0) {
+				if (curPwyDataObj.getPrjSpeciesCount() > 0) { // skip this pathway if there are no projections
+					sb2.append(cPwyName + "\t" + curPwyDataObj.getCount());
+					for (GKInstance curSpecies : speciesList)
+						sb2.append("\t" + curPwyDataObj.getPrjSpeciesGeneCount(curSpecies.getDisplayName()));
+					System.out.println(sb2);
+				}
+			}
+		}
+	}
+
+
+	private String buildProjectedReactionsRow(Collection<GKInstance> curPathways, String OsRXNname, Long OsRXNid,
     										Long PrjRxnID, 
     										String speciesName, String speciesID, GKInstance physEnt) throws Exception {
     	String refGeneDetails = "";
@@ -2979,7 +3090,8 @@ public class CuratorUtilities
 			//run_utilities.dumpRGPsBinnedByPathway(); // for PR data releases, for Gramene search index: gene_ids_by_pathway_and_species.tab
 			//run_utilities.stringTest();i
 			//run_utilities.dumpRiceProjectionReactionTable();
-			run_utilities.dumpOrthologyByPathwayAndReaction();
+			//run_utilities.dumpOrthologyByPathwayAndReaction();
+			run_utilities.dumpOrthologyByPathway(true);
 			//run_utilities.exportSpeciesListJSON();
 			//run_utilities.checkDiagramsForDBIDs("/pathToFile.txt"); // TODO: low priority
 
