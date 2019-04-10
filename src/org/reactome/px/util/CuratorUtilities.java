@@ -292,6 +292,7 @@ public class CuratorUtilities
     @SuppressWarnings("unchecked")
     private void listRiceRGPs(boolean hasUniProt, boolean prioritizeOS) throws Exception
     {
+		// TODO: need to expand for RefDNASeq and RefRNASeq
     	if (hasUniProt) {
 	    	logger.info("Collecting RGP identifiers matching refDB UniProt");
 	    	
@@ -307,6 +308,7 @@ public class CuratorUtilities
 	    	String refDb = new String();
 	    	String uniprot_id = new String();
 	    	String gene_id = new String();
+			String RAP_Expression = "OS\\d{2}G\\d{7}";
 	    	int count = 0;
 	        for (GKInstance rgp : c) {
 	        	
@@ -321,7 +323,7 @@ public class CuratorUtilities
 						// try prioritizing OS over LOC values from geneNames, see what the counts look like
 						if (prioritizeOS) {
 							// grab more recently curated rice RGPs with OS ids, and all RGPs with an OS somewhere
-							if (currName.toUpperCase().startsWith("OS") && currName.length() == 12) {
+							if (currName.toUpperCase().startsWith("OS") && currName.matches(RAP_Expression)) {
 								gene_id = currName;
 								break;
 							}
@@ -342,7 +344,8 @@ public class CuratorUtilities
 								break;
 							}
 							// and more recently curated rice RGPs with OS ids and no LOC (minority)
-							if (currName.toUpperCase().startsWith("OS") && currName.length() == 12) {
+							//if (currName.toUpperCase().startsWith("OS") && currName.length() == 12) {
+							if (currName.toUpperCase().startsWith("OS") && currName.matches(RAP_Expression)) {
 								gene_id = currName;
 							}
 							// then grab miRBase entries for RNA
@@ -3085,13 +3088,14 @@ public class CuratorUtilities
 			//run_utilities.orthologyExporter();
 			//run_utilities.renameStaleLOCs();
 
-			//run_utilities.listRiceRGPs(true, true); // for PR data releases; pre-projection
+			run_utilities.listRiceRGPs(true, false); // for PR data releases; pre-projection
+			//run_utilities.listRiceRGPs(true, false); // run this both ways; build a broader projection list, doesn't hurt
 			//run_utilities.dumpProjectionStats(true); // for PR data releases - stats page, tab or html
 			//run_utilities.dumpRGPsBinnedByPathway(); // for PR data releases, for Gramene search index: gene_ids_by_pathway_and_species.tab
 			//run_utilities.stringTest();i
 			//run_utilities.dumpRiceProjectionReactionTable();
 			//run_utilities.dumpOrthologyByPathwayAndReaction();
-			run_utilities.dumpOrthologyByPathway(true);
+			//run_utilities.dumpOrthologyByPathway(true);
 			//run_utilities.exportSpeciesListJSON();
 			//run_utilities.checkDiagramsForDBIDs("/pathToFile.txt"); // TODO: low priority
 
