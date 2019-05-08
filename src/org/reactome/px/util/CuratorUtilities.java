@@ -2084,9 +2084,11 @@ public class CuratorUtilities
 			String pName;
 			String pSTID;
 			String rSTID;
-			ArrayList<String> prjGeneList;
+			String prjGeneList;
 			int geneCount;
-			HashMap<String, Integer> prjSpecies = new HashMap();
+			String curatedGenes;
+			HashMap<String, Integer> prjOrthoCounts = new HashMap();  // collection of ortho-counts
+            HashMap<String, String> prjOrthoGenes = new HashMap();  // collection of ortho-gene names
 
 			public void setPName(String name) { this.pName = name; }
 			public String getPName() { return this.pName; }
@@ -2100,15 +2102,27 @@ public class CuratorUtilities
 			public void setCount(int count) { this.geneCount = count; }
 			public int getCount() { return this.geneCount; }
 
-			public void setPrjSpecies(String prjName, int prjCount) {
-				this.prjSpecies.put(prjName, prjCount);
+            public void setCuratedGenes(String refGeneList) { this.curatedGenes = refGeneList; }
+            public String getCuratedGenes() { return this.curatedGenes; }
+
+            public void setOrthoCounts(String prjName, Integer prjCount) {
+				this.prjOrthoCounts.put(prjName, prjCount);
 			}
-			public int getPrjSpeciesGeneCount(String key) {
-				if (this.prjSpecies.get(key) != null)
-					return this.prjSpecies.get(key);
+			public int getOrthoCounts(String key) {
+				if (this.prjOrthoCounts.get(key) != null)
+					return this.prjOrthoCounts.get(key);
 				else
 					return 0;
 			}
+            public void setOrthoGenes(String prjName, String prjGeneList) {
+                this.prjOrthoGenes.put(prjName, prjGeneList);
+            }
+            public String getOrthoGenes(String key) {
+                if (this.prjOrthoGenes.get(key) != null)
+                    return this.prjOrthoGenes.get(key);
+                else
+                    return "";
+            }
 		}
 
 		// build species name List
@@ -2157,18 +2171,39 @@ public class CuratorUtilities
 
 			// get and set Os gene count for current rxn
 			Set<GKInstance> curOSRGPs = InstanceUtilities.grepRefPepSeqsFromPathway(curR); // ignore methods name, it works for reactions, too
-			curRxnData.setCount(curOSRGPs.size());
+            if (!listOrthos) {
+                curRxnData.setCount(curOSRGPs.size());
+            } else {
+                String OSRGPSAsString = "";
+                for (GKInstance OSRGP : curOSRGPs) {
+                    String curRGPName = OSRGP.getDisplayName();
+                    String finalName = "";
+                    if (curRGPName.contains("UniProt:"))
+                        finalName = curRGPName.split(":")[1].split(" ")[0];
+                    OSRGPSAsString += ((OSRGPSAsString.length() > 0) ? "," : "") + finalName;
+                }
+                curRxnData.setCuratedGenes(OSRGPSAsString);
+            }
 
 			// get and set prj gene counts for current rxn in all proj. species
 			Collection<GKInstance> orthoEvents = curR.getAttributeValuesList(ReactomeJavaConstants.orthologousEvent);
 			if (orthoEvents.size() > 0) {
 				for (GKInstance orthoEvent : orthoEvents) {
 					String curSpeciesName = ((GKInstance)orthoEvent.getAttributeValue(ReactomeJavaConstants.species)).getDisplayName();
-                    //Set<GKInstance> curOrthoGenes;
-                    //curOrthoGenes = InstanceUtilities.grepRefPepSeqsFromPathway(orthoEvent);
-					curRxnData.setPrjSpecies(
-						curSpeciesName,
-						InstanceUtilities.grepRefPepSeqsFromPathway(orthoEvent).size()); // TODO: also spit out the genenames themselves
+					if (!listOrthos) {
+                        curRxnData.setOrthoCounts(
+                                curSpeciesName,
+                                InstanceUtilities.grepRefPepSeqsFromPathway(orthoEvent).size());
+                    } else {
+                        Set<GKInstance> curGenes = InstanceUtilities.grepRefPepSeqsFromPathway(orthoEvent);
+                        String curGenesAsString = "";
+                        for (GKInstance curGene : curGenes) {
+                            curGenesAsString += ((curGenesAsString.length() > 0) ? "," : "") + (curGene.getDisplayName().split(":"))[1];
+                        }
+					    curRxnData.setOrthoGenes(
+                                curSpeciesName,
+                                curGenesAsString);
+                    }
 				}
 			}
 
@@ -2190,10 +2225,14 @@ public class CuratorUtilities
 			StringBuilder sb2 = new StringBuilder();
 			String cRxnName = entry.getKey();
 			OsRxnData curRxnDataObj = entry.getValue();
-			if (curRxnDataObj.getCount() > 0) {
-				sb2.append(curRxnDataObj.getPName() + "\t" + curRxnDataObj.getPSTID() + "\t" + cRxnName + "\t" + curRxnDataObj.getRSTID() + "\t" + curRxnDataObj.getCount());
+			if (((listOrthos) ? curRxnDataObj.getCuratedGenes().length() : curRxnDataObj.getCount()) > 0) {
+				sb2.append(curRxnDataObj.getPName() + "\t" + curRxnDataObj.getPSTID() + "\t" + cRxnName + "\t" + curRxnDataObj.getRSTID() + "\t" + ((listOrthos) ? curRxnDataObj.getCuratedGenes() : curRxnDataObj.getCount()));
+                //sb2.append(curRxnDataObj.getPName() + "\t" + curRxnDataObj.getPSTID() + "\t" + cRxnName + "\t" + curRxnDataObj.getRSTID() + "\t" + curRxnDataObj.getCount());
 				for (GKInstance curSpecies : speciesList)
-					sb2.append("\t" + curRxnDataObj.getPrjSpeciesGeneCount(curSpecies.getDisplayName()));
+                    if (!listOrthos)
+                        sb2.append("\t" + curRxnDataObj.getOrthoCounts(curSpecies.getDisplayName()));
+                    else
+                        sb2.append("\t" + curRxnDataObj.getOrthoGenes(curSpecies.getDisplayName()));
 				System.out.println(sb2);
 			}
 		}
