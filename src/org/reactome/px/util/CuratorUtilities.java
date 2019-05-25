@@ -3102,6 +3102,50 @@ public class CuratorUtilities
 	}
 
 	/**
+	 * Retrieve and list Reference Gene Products
+	 * @Parms
+	 *
+	 */
+	@SuppressWarnings("unchecked")
+	private void dumpUniProtsWithMSU() throws Exception
+	{
+		logger.info("Collecting RefSeq instances with refDB UniProt");
+		Collection<GKInstance> c = uniAdaptor.fetchInstanceByAttribute(ReactomeJavaConstants.ReferenceSequence,
+				ReactomeJavaConstants.referenceDatabase,
+				"=",
+				2L);  // UniProt
+		logger.info("raw size: " + c.size());
+		String gene_id = new String();
+		int count = 0;
+
+		System.out.println("Class\tRefDbId\tGeneNames\tNames");
+
+		for (GKInstance rgp : c) {
+			if (rgp.getAttributeValuesList(ReactomeJavaConstants.geneName) != null) {
+				List<String> geneNames = rgp.getAttributeValuesList(ReactomeJavaConstants.geneName);
+				for (Iterator<String> it = geneNames.iterator(); it.hasNext();) {
+					String currName = (String)it.next().toUpperCase();
+					gene_id = gene_id + ((gene_id.length() > 0) ? "," : "") + currName;
+				}
+			}
+			String nameList = "";
+			if (rgp.getAttributeValuesList(ReactomeJavaConstants.name) != null) {
+				List<String> names = rgp.getAttributeValuesList(ReactomeJavaConstants.name);
+				for (Iterator<String> it = names.iterator(); it.hasNext(); ) {
+					String currName = it.next();
+					nameList = nameList + ((nameList.length() > 0) ? "," : "") + currName;
+				}
+			}
+			if (gene_id.length() > 0) {
+				count++;
+				System.out.println(rgp.getSchemClass().getName() + "\t" + rgp.getDisplayName() + "\t" + gene_id + "\t" + nameList);
+			}
+			gene_id = "";
+		}
+		logger.info("filtered size: " + count);
+	}
+
+	/**
 	 * Constructor: Establish logger and configs.
 	 */
     public CuratorUtilities() throws Exception
@@ -3151,10 +3195,11 @@ public class CuratorUtilities
 			//run_utilities.dumpRGPsBinnedByPathway(); // for PR data releases, for Gramene search index: gene_ids_by_pathway_and_species.tab
 			//run_utilities.stringTest();
 			//run_utilities.dumpRiceProjectionReactionTable();
-			run_utilities.dumpOrthologyByPathwayAndReaction(true);
+			//run_utilities.dumpOrthologyByPathwayAndReaction(true);
 			//run_utilities.dumpOrthologyByPathway(true);
 			//run_utilities.exportSpeciesListJSON();
 			//run_utilities.checkDiagramsForDBIDs("/pathToFile.txt"); // TODO: low priority
+			run_utilities.dumpUniProtsWithMSU();
 
 	        // create and attach IE to changes; commit changes
     		//run_utilities.commitChanges();
