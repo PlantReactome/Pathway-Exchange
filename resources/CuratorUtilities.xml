@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <utility_settings>
-	<db_connection_info host="floret.cgrb.oregonstate.edu" port="3306" name="test_slice_oryza_sativa_16c_ortho_osat_all" user="react-app-user" pwd="react-app-user_pw"/>
-	<!--db_connection_info host="floret.cgrb.oregonstate.edu" port="3306" name="test_slice_oryza_sativa_16" user="react-app-user" pwd="react-app-user_pw"/-->
+	<!--db_connection_info host="floret.cgrb.oregonstate.edu" port="3306" name="test_slice_oryza_sativa_16c_ortho_osat_all" user="react-app-user" pwd="react-app-user_pw"/-->
+	<!--db_connection_info host="floret.cgrb.oregonstate.edu" port="3306" name="test_slice_oryza_sativa_17_ortho_osat_all" user="react-app-user" pwd="react-app-user_pw"/-->
+	<db_connection_info host="floret.cgrb.oregonstate.edu" port="3306" name="test_slice_oryza_sativa_19" user="react-app-user" pwd="react-app-user_pw"/>
+	<!--db_connection_info host="floret.cgrb.oregonstate.edu" port="3306" name="gk_current" user="react-app-user" pwd="react-app-user_pw"/-->
 	<!--db_connection_info host="reactomecurator.oicr.on.ca" port="3306" name="gk_central" user="authortool" pwd="T001test"/-->
 	<!--db_connection_info host="floret.cgrb.oregonstate.edu" port="3306" name="Os_identity_revisions" user="react-app-user" pwd="react-app-user_pw"/-->
 	<!--data_file path="/home/preecej/Documents/projects/plant_reactome/plant_reactome_site/projection/2014_rice_conference/brassinosteroid_signaling_V4.rtpj"/-->

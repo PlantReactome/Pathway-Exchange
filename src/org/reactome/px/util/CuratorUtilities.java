@@ -397,6 +397,148 @@ public class CuratorUtilities
     }
 
 	/**
+	 * Retrieve and list ReferenceRNASequence
+	 * @Parms
+	 */
+	@SuppressWarnings("unchecked")
+	private void listRiceRefRNA()  throws Exception
+	{
+		Collection<GKInstance> c = uniAdaptor.fetchInstanceByAttribute(ReactomeJavaConstants.ReferenceRNASequence,
+		ReactomeJavaConstants.referenceDatabase,
+		"=",
+		8986727L);  // Ensembl-Gramene
+		logger.info("raw size: " + c.size());
+		String refDb = new String();
+		String transcript_id = new String();
+		int count = 0;
+		for (GKInstance rna : c) {
+			if (rna.getAttributeValue(ReactomeJavaConstants.species) == null) {
+				logger.info("no species for this rna! skip.");
+				continue;
+			}
+			if (!((GKInstance)rna.getAttributeValue(ReactomeJavaConstants.species)).getDisplayName().startsWith("Oryza sativa")) {
+				continue;
+			}
+			//if (rna.getAttributeValue(ReactomeJavaConstants.referenceDatabase) != null)
+			//	refDb = ((GKInstance)rna.getAttributeValue(ReactomeJavaConstants.referenceDatabase)).getDisplayName().toUpperCase();
+			if (rna.getAttributeValue(ReactomeJavaConstants.identifier) != null)
+				transcript_id = rna.getAttributeValue(ReactomeJavaConstants.identifier).toString().toUpperCase();
+			if (transcript_id.length() > 0) {
+				count++;
+				//System.out.println(refDb + ":" + transcript_id);
+				System.out.println(transcript_id);
+			}
+			transcript_id = "";
+		}
+		logger.info("filtered size: " + count);
+	}
+
+	/**
+	 * Retrieve and list ReferenceDNASequence
+	 * @Parms
+	 */
+	@SuppressWarnings("unchecked")
+	private void listRiceRefDNA()  throws Exception
+	{
+		Collection<GKInstance> c = uniAdaptor.fetchInstanceByAttribute(ReactomeJavaConstants.ReferenceDNASequence,
+				ReactomeJavaConstants.referenceDatabase,
+				"=",
+				8986727L);  // Ensembl-Gramene
+		logger.info("raw size: " + c.size());
+		String refDb = new String();
+		String gene_id = new String();
+		int count = 0;
+		for (GKInstance dna : c) {
+			if (dna.getAttributeValue(ReactomeJavaConstants.species) == null) {
+				logger.info("no species for this rna! skip.");
+				continue;
+			}
+			if (!((GKInstance)dna.getAttributeValue(ReactomeJavaConstants.species)).getDisplayName().startsWith("Oryza sativa")) {
+				continue;
+			}
+			//if (dna.getAttributeValue(ReactomeJavaConstants.referenceDatabase) != null)
+			//	refDb = ((GKInstance)dna.getAttributeValue(ReactomeJavaConstants.referenceDatabase)).getDisplayName().toUpperCase();
+			if (dna.getAttributeValue(ReactomeJavaConstants.identifier) != null)
+				gene_id = dna.getAttributeValue(ReactomeJavaConstants.identifier).toString().toUpperCase();
+			if (gene_id.length() > 0) {
+				count++;
+				//System.out.println(refDb + ":" + gene_id);
+				System.out.println(gene_id);
+			}
+			gene_id = "";
+		}
+		logger.info("filtered size: " + count);
+	}
+
+	/* How many curated rice RGPs only have an RAP or MSU id in geneName? If none or not many, then vastly simplifies orthopair generation. */
+	@SuppressWarnings("unchecked")
+	private void evaluateRiceRGPs(boolean isRAPfocus) throws Exception
+	{
+		logger.info("Collecting RGP identifiers matching refDB UniProt");
+
+		Collection<GKInstance> c = uniAdaptor.fetchInstanceByAttribute(ReactomeJavaConstants.ReferenceGeneProduct,
+				ReactomeJavaConstants.referenceDatabase,
+				"=",
+				2L);  // UniProt
+		logger.info("raw size: " + c.size());
+		String refDb = new String();
+		String uniprot_id = new String();
+		String gene_id = new String();
+		String RAP_Expression = "^OS\\d{2}G\\d{7}";
+		String MSU_Expression = "^LOC_OS\\d{2}G\\d{5}";
+		String primary_expr;
+		String secondary_expr;
+		if (isRAPfocus) {
+			primary_expr = RAP_Expression;
+			secondary_expr = MSU_Expression;
+		} else {
+			primary_expr = MSU_Expression;
+			secondary_expr = RAP_Expression;
+		}
+		boolean hasOppositeID = false; // we're looking for RGPs with uqique ID sources, per UniProt
+		int count = 0;
+		for (GKInstance rgp : c) {
+			if (rgp.getAttributeValue(ReactomeJavaConstants.species) == null) {
+				logger.info("no species for this rgp! skip.");
+				continue;
+			}
+			if (!((GKInstance)rgp.getAttributeValue(ReactomeJavaConstants.species)).getDisplayName().startsWith("Oryza sativa")) {
+				continue;
+			}
+			if (rgp.getAttributeValue(ReactomeJavaConstants.referenceDatabase) != null)
+				refDb = ((GKInstance)rgp.getAttributeValue(ReactomeJavaConstants.referenceDatabase)).getDisplayName();
+			if (rgp.getAttributeValue(ReactomeJavaConstants.identifier) != null)
+				uniprot_id = rgp.getAttributeValue(ReactomeJavaConstants.identifier).toString();
+			if (rgp.getAttributeValuesList(ReactomeJavaConstants.geneName) != null) {
+				List<String> geneNames = rgp.getAttributeValuesList(ReactomeJavaConstants.geneName);
+				for (Iterator<String> it = geneNames.iterator(); it.hasNext();) {
+					String currName = (String)it.next().toUpperCase();
+					if (currName.toUpperCase().matches(primary_expr)) {
+						if (!gene_id.contains(currName.toUpperCase())) {
+							gene_id += (gene_id.length() > 0 ? ", " : "") + currName;
+						}
+					}
+					if (currName.toUpperCase().matches(secondary_expr)) {
+						hasOppositeID = true;
+					}
+				}
+			}
+			if (hasOppositeID) { // don't care about these; they have both ids
+				hasOppositeID = false;
+				gene_id = "";
+				continue;
+			}
+			if (gene_id.length() > 0) {
+				count++;
+				System.out.println(rgp.getDBID() + "\t" + refDb + ":" + uniprot_id + "\t" + gene_id);
+			}
+			gene_id = "";
+		}
+		logger.info("filtered size: " + count);
+	}
+
+
+	/**
 	 * Retrieve and list Ensembl genes by stableID and species
 	 * @Parms
 	 *
@@ -3189,8 +3331,15 @@ public class CuratorUtilities
 			//run_utilities.orthologyExporter();
 			//run_utilities.renameStaleLOCs();
 
+			// TODO: would be a really good idea to combine the next two calls and create a list of RAP::UniProt,
+			//  with MSU::UniProt ONLY IF RAP is not available in geneName. Then also load RAP-MSU mapping file and
+			//  convert as many MSU listings to RAP (will make things easier for inparanoid download and incomparanoid.py
+			//  revisions)
 			//run_utilities.listRiceRGPs(true, true); // for PR data releases; pre-projection
 			//run_utilities.listRiceRGPs(true, false); // run this both ways; build a broader projection list, doesn't hurt
+			//run_utilities.listRiceRefRNA(); // for PR data releases;
+			//run_utilities.listRiceRefDNA(); // for PR data releases;
+			run_utilities.evaluateRiceRGPs(false);
 			//run_utilities.dumpProjectionStats(false); // for PR data releases - stats page, tab or html
 			//run_utilities.dumpRGPsBinnedByPathway(); // for PR data releases, for Gramene search index: gene_ids_by_pathway_and_species.tab
 			//run_utilities.stringTest();
@@ -3199,7 +3348,7 @@ public class CuratorUtilities
 			//run_utilities.dumpOrthologyByPathway(true);
 			//run_utilities.exportSpeciesListJSON();
 			//run_utilities.checkDiagramsForDBIDs("/pathToFile.txt"); // TODO: low priority
-			run_utilities.dumpUniProtsWithMSU();
+			//run_utilities.dumpUniProtsWithMSU();
 
 	        // create and attach IE to changes; commit changes
     		//run_utilities.commitChanges();
