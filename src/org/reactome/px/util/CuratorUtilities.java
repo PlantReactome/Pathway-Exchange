@@ -3324,7 +3324,7 @@ public class CuratorUtilities
 	        //run_utilities.dumpRGPsBinnedByPathwayOld();
 	        //run_utilities.dumpPathwayDiagramTermsForGrameneSearchIndex();
 	        //run_utilities.dumpQuickSearchTermsForGrameneSearchIndex();
-	        //run_utilities.exportReactionProjectionTable(); // for PR data releases - Gramoogle
+	        //run_utilities.exportReactionProjectionTable(); // for PR data releases - Gramoogle (deprecated?)
 			//run_utilities.dumpGeneCountsInPathwaysBySpecies();
 			//run_utilities.ensemblGeneDump();
 			//run_utilities.addTaxonIds();
@@ -3338,8 +3338,9 @@ public class CuratorUtilities
 			//run_utilities.listRiceRGPs(true, true); // for PR data releases; pre-projection
 			//run_utilities.listRiceRGPs(true, false); // run this both ways; build a broader projection list, doesn't hurt
 			//run_utilities.listRiceRefRNA(); // for PR data releases;
-			//run_utilities.listRiceRefDNA(); // for PR data releases;
-			run_utilities.evaluateRiceRGPs(false);
+			run_utilities.listRiceRefDNA(); // for PR data releases;
+
+			//run_utilities.evaluateRiceRGPs(true);
 			//run_utilities.dumpProjectionStats(false); // for PR data releases - stats page, tab or html
 			//run_utilities.dumpRGPsBinnedByPathway(); // for PR data releases, for Gramene search index: gene_ids_by_pathway_and_species.tab
 			//run_utilities.stringTest();
