@@ -18,3 +18,7 @@ awk {'print $2,"\t",$1}' ${outputPrefix}_prioritize_all_clean_sort_uniq.tab | so
 awk {'print $2,"\t",$1}' ${outputPrefix}_prioritize_all_clean_sort_uniq.tab | sort | uniq > os_loc_2_os_uniprot_rice_${outputPrefix}_manual_with_dupes.txt
 
 cat os_loc_2_os_uniprot_rice_${outputPrefix}_manual_with_dupes.txt | grep -v -f $DIR/../resources/RGP_dupes_list.lst > os_loc_2_os_uniprot_rice_${outputPrefix}_no_dupes.txt
+
+echo "The following IDs still have duplicate entries"
+
+cat os_loc_2_os_uniprot_rice_${outputPrefix}_no_dupes.txt | awk -F "\t" '{print $1}' | sort | uniq -d 
